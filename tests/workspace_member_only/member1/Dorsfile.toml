@@ -1,2 +1,6 @@
 [task.check]
 command = "cargo check"
+
+[task.should-be-in-workspace]
+command = "[ ${PWD##*/} == \"workspace_member_only\" ]"
+run = "workspace-root"

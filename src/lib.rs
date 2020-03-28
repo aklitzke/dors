@@ -35,7 +35,11 @@ impl DorsfileGetter {
     }
 
     pub fn get<P: AsRef<Path>>(&self, crate_path: P) -> Result<Dorsfile, Box<dyn Error>> {
-        println!("getting: {:?}\nworkspace_root: {:?}", crate_path.as_ref(), self.workspace_root);
+        println!(
+            "getting: {:?}\nworkspace_root: {:?}",
+            crate_path.as_ref(),
+            self.workspace_root
+        );
         if crate_path.as_ref() == self.workspace_root {
             return Ok(self
                 .workspace_dorsfile
@@ -104,7 +108,10 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         task_runner: &TaskRunner,
     ) -> Result<ExitStatus, Box<dyn Error>> {
         println!("Running task {:?} in {:?}", task_name, dir);
-        let task = dorsfile.task.get(task_name).ok_or(format!("no task '{}' defined", task_name))?;
+        let task = dorsfile
+            .task
+            .get(task_name)
+            .ok_or(format!("no task '{}' defined", task_name))?;
 
         Ok(match task.run {
             Run::Here => run_command(&task.command, dir, &dorsfile.env),
@@ -177,7 +184,7 @@ fn run_command<P: AsRef<Path>>(
         .join(format!("tmp-{}.sh", chars));
     std::fs::write(&file, command).unwrap();
     println!("{:?}", workdir.as_ref().canonicalize());
-    let exit_status = Command::new("sh")
+    let exit_status = Command::new("bash")
         .arg(file.to_str().unwrap())
         .envs(env)
         .current_dir(workdir)
