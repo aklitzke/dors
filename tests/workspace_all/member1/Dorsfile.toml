@@ -6,3 +6,7 @@ command = "exit 55"
 
 [task.should-overwrite-members]
 command = "true"
+
+[task.nested-works-with-run-variants]
+command = "[ ${PWD##*/} == \"workspace_all\" ]"
+run = { path = ".." }

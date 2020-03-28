@@ -35,7 +35,7 @@ fn test_member_only() {
 
 #[test]
 fn test_workspace_all() {
-    ["should-not-overwrite", "should-overwrite-members"]
+    ["should-not-overwrite", "should-overwrite-members", "nested-works-with-run-variants"]
         .iter()
         .for_each(|task| assert!(run(task, "./tests/workspace_all").unwrap().success()));
 }

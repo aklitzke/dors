@@ -1,23 +1,13 @@
 mod dorsfile;
 mod util;
 use cargo_metadata::MetadataCommand;
-use dorsfile::{Dorsfile, Run, Task};
+use dorsfile::{Dorsfile, Run};
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::ExitStatus;
 use util::TakeWhileOkExt;
-
-fn merge_dorsfiles(mut curr: Dorsfile, workspace: &Dorsfile) -> Dorsfile {
-    let mut env = workspace.env.clone();
-    let mut task = workspace.task.clone();
-    env.extend(curr.env.drain());
-    task.extend(curr.task.drain());
-    curr.env = env;
-    curr.task = task;
-    curr
-}
 
 struct DorsfileGetter {
     workspace_root: PathBuf,
@@ -52,10 +42,18 @@ impl DorsfileGetter {
         let local = crate_path.as_ref().join("./Dorsfile.toml");
 
         Ok(match (local.exists(), self.workspace_dorsfile.is_some()) {
-            (true, true) => merge_dorsfiles(
-                Dorsfile::load(local)?,
-                self.workspace_dorsfile.as_ref().unwrap(),
-            ),
+            (true, true) => {
+                // Extend local dorsfile with workspace dorsfile
+                let mut curr = Dorsfile::load(local)?;
+                let workspace_dorsfile = self.workspace_dorsfile.as_ref().unwrap();
+                let mut env = workspace_dorsfile.env.clone();
+                let mut task = workspace_dorsfile.task.clone();
+                env.extend(curr.env.drain());
+                task.extend(curr.task.drain());
+                curr.env = env;
+                curr.task = task;
+                curr
+            },
             (true, false) => Dorsfile::load(local)?,
             (false, true) => self.workspace_dorsfile.as_ref().cloned().unwrap(),
             (false, false) => {
@@ -132,7 +130,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     .map(|path| {
                         let mut dorsfile = task_runner.dorsfiles.get(&path)?;
                         // avoid infinite loop
-                        if let AllMembers = &dorsfile.task[task_name].run {
+                        if let Run::AllMembers = &dorsfile.task[task_name].run {
                             dorsfile.task.get_mut(task_name).unwrap().run = Run::Here
                         }
                         run_task(task_name, &dorsfile, &path, task_runner)
