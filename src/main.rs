@@ -1,7 +1,7 @@
 use clap::{crate_version, App, Arg, ArgGroup};
 
 fn main() {
-    let matches = App::new("Dors -- do things, for rust!")
+    let matches = App::new("dors -- do things, for rust!")
         .version(crate_version!())
         .author("Andrew Klitzke <nafango2@gmail.com>")
         .about("Workspace-friendly task runner for cargo")
@@ -22,9 +22,7 @@ fn main() {
     if matches.is_present("list") {
         let mut tasks = dors::all_tasks(std::env::current_dir().unwrap()).unwrap();
         tasks.sort();
-        tasks.iter().for_each(|task|
-            println!("{}", task)
-        );
+        tasks.iter().for_each(|task| println!("{}", task));
         return;
     }
     if let Some(task) = matches.value_of("TASK") {

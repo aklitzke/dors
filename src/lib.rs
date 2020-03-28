@@ -1,7 +1,7 @@
 mod dorsfile;
 mod util;
 use cargo_metadata::MetadataCommand;
-use dorsfile::{Dorsfile, Run};
+use dorsfile::{Dorsfile, MemberModifiers, Run};
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -67,7 +67,7 @@ impl DorsfileGetter {
 }
 
 struct CargoWorkspaceInfo {
-    paths: Vec<PathBuf>,
+    members: HashMap<String, PathBuf>,
     root: PathBuf,
 }
 impl CargoWorkspaceInfo {
@@ -81,20 +81,24 @@ impl CargoWorkspaceInfo {
             .iter()
             .map(|package| (package.id.clone(), package))
             .collect();
-        let paths: Vec<PathBuf> = metadata
+        let members = metadata
             .workspace_members
             .into_iter()
             .map(|member| {
-                packages[&member]
-                    .manifest_path
-                    .canonicalize()
-                    .unwrap()
-                    .parent()
-                    .unwrap()
-                    .into()
+                let package = packages[&member];
+                (
+                    package.name.clone(),
+                    package
+                        .manifest_path
+                        .canonicalize()
+                        .unwrap()
+                        .parent()
+                        .unwrap()
+                        .into(),
+                )
             })
             .collect();
-        CargoWorkspaceInfo { paths, root }
+        CargoWorkspaceInfo { members, root }
     }
 }
 
@@ -138,18 +142,37 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 // TODO error gracefully when someone messes this up
                 run_command(&task.command, &task_runner.workspace.root, &dorsfile.env)
             }
-            Run::AllMembers => {
+            Run::OnMembers => {
                 if dir != task_runner.workspace.root {
-                    panic!("cannot run on all-members from outside workspace root");
+                    panic!("cannot run on on-members from outside workspace root");
                 }
                 task_runner
                     .workspace
-                    .paths
+                    .members
                     .iter()
+                    .filter_map(|(name, path)| match task.member_modifiers {
+                        Some(ref modifiers) => match modifiers {
+                            MemberModifiers::SkipMembers(skips) => {
+                                if skips.contains(name) {
+                                    None
+                                } else {
+                                    Some(path)
+                                }
+                            }
+                            MemberModifiers::OnlyMembers(onlys) => {
+                                if onlys.contains(name) {
+                                    Some(path)
+                                } else {
+                                    None
+                                }
+                            }
+                        },
+                        None => Some(path),
+                    })
                     .map(|path| {
                         let mut dorsfile = task_runner.dorsfiles.get(&path)?;
                         // avoid infinite loop
-                        if let Run::AllMembers = &dorsfile.task[task_name].run {
+                        if let Run::OnMembers = &dorsfile.task[task_name].run {
                             dorsfile.task.get_mut(task_name).unwrap().run = Run::Here
                         }
                         run_task(task_name, &dorsfile, &path, task_runner)

@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
@@ -12,11 +12,22 @@ pub struct Dorsfile {
     pub task: HashMap<String, Task>,
 }
 
+#[serde(deny_unknown_fields)]
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct Task {
     #[serde(default)]
     pub run: Run,
     pub command: String,
+    #[serde(flatten)]
+    pub member_modifiers: Option<MemberModifiers>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub enum MemberModifiers {
+    SkipMembers(HashSet<String>),
+    OnlyMembers(HashSet<String>),
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -25,7 +36,7 @@ pub enum Run {
     Here,
     Path(PathBuf),
     WorkspaceRoot,
-    AllMembers,
+    OnMembers,
 }
 impl Default for Run {
     fn default() -> Run {
@@ -64,7 +75,12 @@ command = '''
     hi one
     hi two
 '''
-run = "all-members"
+run = "on-members"
+skip-members = ["member1"]
+
+[task.skip]
+command = "echo hi"
+only-members = ["member2"]
 
 [task.specific]
 command = "echo 'hi'"
@@ -72,7 +88,7 @@ run = { path = "../whaat" }
 "#;
         let mf = Dorsfile::parse(sample).unwrap();
         println!("{:?}", mf);
-        assert_eq!(mf.task.len(), 4);
+        assert_eq!(mf.task.len(), 5);
         assert_eq!(mf.env.len(), 1);
     }
 }

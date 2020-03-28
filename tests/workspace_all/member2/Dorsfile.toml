@@ -4,3 +4,6 @@ command = "true"
 [task.nested-works-with-run-variants]
 command = "[ ${PWD##*/} == \"workspace_all\" ]"
 run = "workspace-root"
+
+[task.only-member2]
+command = "true"

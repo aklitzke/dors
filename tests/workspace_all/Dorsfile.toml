@@ -9,8 +9,18 @@ command = "true"
 
 [task.should-overwrite-members]
 command = "exit 55"
-run = "all-members"
+run = "on-members"
 
 [task.nested-works-with-run-variants]
 command = "false"
-run = "all-members"
+run = "on-members"
+
+[task.only-member1]
+command = "false"
+run = "on-members"
+skip-members = ["member2"]
+
+[task.only-member2]
+command = "false"
+run = "on-members"
+only-members = ["member2"]
