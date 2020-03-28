@@ -1,5 +1,4 @@
 mod dorsfile;
-
 use cargo_metadata::MetadataCommand;
 use dorsfile::{Dorsfile, Run, Task};
 use std::collections::HashMap;
@@ -18,7 +17,7 @@ fn merge_dorsfiles(mut curr: Dorsfile, workspace: &Dorsfile) -> Dorsfile {
     curr
 }
 
-pub struct DorsfileGetter {
+struct DorsfileGetter {
     workspace_root: PathBuf,
     workspace_dorsfile: Option<Dorsfile>,
 }
@@ -61,7 +60,7 @@ impl DorsfileGetter {
     }
 }
 
-fn run(task: &str) -> Result<ExitStatus, Box<dyn Error>> {
+pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
     let metadata = MetadataCommand::new().exec().unwrap();
     let workspace_root = metadata.workspace_root.canonicalize().unwrap();
     // allow O(1) referencing of package information
@@ -86,9 +85,7 @@ fn run(task: &str) -> Result<ExitStatus, Box<dyn Error>> {
     println!("workspace_paths: {:#?}", workspace_paths);
     let dorsfiles = DorsfileGetter::new(&workspace_root).unwrap();
 
-    let current_dir = std::env::current_dir().unwrap();
-
-    let dorsfile = dorsfiles.get(&current_dir).unwrap();
+    let dorsfile = dorsfiles.get(dir.as_ref()).unwrap();
 
     struct TaskRunner {
         workspace_paths: Vec<PathBuf>,
@@ -142,7 +139,7 @@ fn run(task: &str) -> Result<ExitStatus, Box<dyn Error>> {
     run_task(
         task,
         &dorsfile,
-        &current_dir,
+        &dir.as_ref(),
         &TaskRunner {
             workspace_root,
             workspace_paths,
@@ -180,5 +177,5 @@ fn run_command<P: AsRef<Path>>(
 
 #[test]
 fn test() {
-    run("check");
+    run("check", ".");
 }
