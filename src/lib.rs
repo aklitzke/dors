@@ -121,16 +121,6 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 run_command(&task.command, &task_runner.workspace_root, &dorsfile.env)
             }
             Run::AllMembers => {
-                // workspace_members
-                // check if I'm at workspace root -- error if not
-                // generate list of members to run against
-                // Load dorsfile for each of these members
-                // call run task against each member,
-                // setting task = the name of this task,
-                // dorsfile = the thing I loaded for that dir
-                // dir equal to the dir of that workspace
-                println!("Doing all-members");
-                println!("dir: {:?}\nroot: {:?}", dir, task_runner.workspace_root);
                 if dir != task_runner.workspace_root {
                     panic!("cannot run on all-members from outside workspace root");
                 }
