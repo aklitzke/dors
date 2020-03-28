@@ -1,2 +1,8 @@
 [task.check]
-command = "echo '====== check worked! ======'"
+command = "cargo check"
+
+[task.test-with-output]
+command = "cargo test -- --nocapture"
+
+[task.build]
+command = "cargo build"

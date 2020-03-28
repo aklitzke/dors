@@ -187,8 +187,3 @@ fn run_command<P: AsRef<Path>>(
     std::fs::remove_file(file).unwrap();
     exit_status
 }
-
-#[test]
-fn test() {
-    run("check", ".");
-}
