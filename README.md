@@ -8,8 +8,8 @@ ecosystem.
 
 Designed with the hope that easy things should be easy, and hard things
 should be possible. Especially targeted toward environments with a large cargo workspace,
-like embedded or cloud-based, that often contain multiple targets, complex deploy scripts,
-and CI pipelines.
+like embedded or cloud-based, that often contain multiple targets, tools outside of the rust ecosystem,
+complex deploy scripts, and CI pipelines.
 
 ## Example
 
