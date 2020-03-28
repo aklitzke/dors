@@ -7,17 +7,16 @@ fn test_workspace_only() {
 
 #[test]
 fn test_member_only() {
-    assert!(run("check", "./tests/workspace_member_only/member1")
-        .unwrap()
-        .success());
-}
-
-#[test]
-fn test_member_only_on_workspace_root() {
-    assert!(run(
+    [
+        "should-be-here",
+        "should-be-here-explicit",
         "should-be-in-workspace",
-        "./tests/workspace_member_only/member1"
-    )
-    .unwrap()
-    .success());
+        "should-be-in-tests",
+    ]
+    .iter()
+    .for_each(|task| {
+        assert!(run(task, "./tests/workspace_member_only/member1")
+            .unwrap()
+            .success())
+    });
 }

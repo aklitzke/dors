@@ -149,7 +149,9 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     .last()
                     .unwrap()?
             }
-            _ => panic!("unhandled run method"),
+            Run::Path(ref target_path) => {
+                run_command(&task.command, dir.join(target_path), &dorsfile.env)
+            }
         })
     }
 

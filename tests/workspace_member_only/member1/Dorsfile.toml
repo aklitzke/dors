@@ -1,6 +1,14 @@
-[task.check]
-command = "cargo check"
+[task.should-be-here]
+command = "[ ${PWD##*/} == \"member1\" ]"
+
+[task.should-be-here-explicit]
+command = "[ ${PWD##*/} == \"member1\" ]"
+run = "here"
 
 [task.should-be-in-workspace]
 command = "[ ${PWD##*/} == \"workspace_member_only\" ]"
 run = "workspace-root"
+
+[task.should-be-in-tests]
+command = "[ ${PWD##*/} == \"tests\" ]"
+run = { path = "../.." }
