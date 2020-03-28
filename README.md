@@ -145,7 +145,7 @@ execution model, and a different syntax.
 **A:** Never. Nope. Go to your room. Don't come out till you've learned your lesson.
 
 **Q:** Do I have to use this with a workspace?  
-**A:** Nope!
+**A:** You can use this crate with or without your crate being a workspace.
 
 **Q:** What are the next steps for improvement?  
 **A:** Likely error messaging. Want something? Open an issue!
