@@ -1,4 +1,4 @@
-use dors::run;
+use dors::{all_tasks, run};
 
 #[test]
 fn test_workspace_only() {
@@ -35,9 +35,13 @@ fn test_member_only() {
 
 #[test]
 fn test_workspace_all() {
-    ["should-not-overwrite", "should-overwrite-members", "nested-works-with-run-variants"]
-        .iter()
-        .for_each(|task| assert!(run(task, "./tests/workspace_all").unwrap().success()));
+    [
+        "should-not-overwrite",
+        "should-overwrite-members",
+        "nested-works-with-run-variants",
+    ]
+    .iter()
+    .for_each(|task| assert!(run(task, "./tests/workspace_all").unwrap().success()));
 }
 
 #[test]
@@ -66,4 +70,20 @@ fn test_workspace_all_member1() {
             .unwrap()
             .success())
     });
+}
+
+#[test]
+fn test_list_workspace_all() {
+    let mut all_tasks = all_tasks("./tests/workspace_all").unwrap();
+    all_tasks.sort();
+    assert_eq!(
+        all_tasks,
+        [
+            "check",
+            "nested-works-with-run-variants",
+            "should-not-overwrite",
+            "should-overwrite",
+            "should-overwrite-members"
+        ]
+    );
 }

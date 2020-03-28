@@ -53,7 +53,7 @@ impl DorsfileGetter {
                 curr.env = env;
                 curr.task = task;
                 curr
-            },
+            }
             (true, false) => Dorsfile::load(local)?,
             (false, true) => self.workspace_dorsfile.as_ref().cloned().unwrap(),
             (false, false) => {
@@ -66,38 +66,57 @@ impl DorsfileGetter {
     }
 }
 
+struct CargoWorkspaceInfo {
+    paths: Vec<PathBuf>,
+    root: PathBuf,
+}
+impl CargoWorkspaceInfo {
+    fn new(dir: &Path) -> CargoWorkspaceInfo {
+        println!("running from dir: {:?}", dir);
+        let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
+        let root = metadata.workspace_root.canonicalize().unwrap();
+        // allow O(1) referencing of package information
+        let packages: HashMap<_, _> = metadata
+            .packages
+            .iter()
+            .map(|package| (package.id.clone(), package))
+            .collect();
+        let paths: Vec<PathBuf> = metadata
+            .workspace_members
+            .into_iter()
+            .map(|member| {
+                packages[&member]
+                    .manifest_path
+                    .canonicalize()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .into()
+            })
+            .collect();
+        CargoWorkspaceInfo { paths, root }
+    }
+}
+
+pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> {
+    let workspace = CargoWorkspaceInfo::new(dir.as_ref());
+    let dorsfiles = DorsfileGetter::new(&workspace.root).unwrap();
+    Ok(dorsfiles
+        .get(dir.as_ref())?
+        .task
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>())
+}
+
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
     let dir = dir.as_ref().canonicalize().unwrap();
-    println!("running from dir: {:?}", dir);
-    let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
-    let workspace_root = metadata.workspace_root.canonicalize().unwrap();
-    // allow O(1) referencing of package information
-    let packages: HashMap<_, _> = metadata
-        .packages
-        .iter()
-        .map(|package| (package.id.clone(), package))
-        .collect();
-    let workspace_paths: Vec<PathBuf> = metadata
-        .workspace_members
-        .into_iter()
-        .map(|member| {
-            packages[&member]
-                .manifest_path
-                .canonicalize()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .into()
-        })
-        .collect();
-    println!("workspace_paths: {:#?}", workspace_paths);
-    let dorsfiles = DorsfileGetter::new(&workspace_root).unwrap();
-
+    let workspace = CargoWorkspaceInfo::new(&dir);
+    let dorsfiles = DorsfileGetter::new(&workspace.root).unwrap();
     let dorsfile = dorsfiles.get(&dir).unwrap();
 
     struct TaskRunner {
-        workspace_paths: Vec<PathBuf>,
-        workspace_root: PathBuf,
+        workspace: CargoWorkspaceInfo,
         dorsfiles: DorsfileGetter,
     }
 
@@ -117,15 +136,15 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             Run::Here => run_command(&task.command, dir, &dorsfile.env),
             Run::WorkspaceRoot => {
                 // TODO error gracefully when someone messes this up
-                // run_command(task, metadata.workspace_root, dorsfile.env)
-                run_command(&task.command, &task_runner.workspace_root, &dorsfile.env)
+                run_command(&task.command, &task_runner.workspace.root, &dorsfile.env)
             }
             Run::AllMembers => {
-                if dir != task_runner.workspace_root {
+                if dir != task_runner.workspace.root {
                     panic!("cannot run on all-members from outside workspace root");
                 }
                 task_runner
-                    .workspace_paths
+                    .workspace
+                    .paths
                     .iter()
                     .map(|path| {
                         let mut dorsfile = task_runner.dorsfiles.get(&path)?;
@@ -150,8 +169,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         &dorsfile,
         &dir,
         &TaskRunner {
-            workspace_root,
-            workspace_paths,
+            workspace,
             dorsfiles,
         },
     )
