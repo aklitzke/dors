@@ -2,7 +2,7 @@ mod dorsfile;
 mod util;
 use cargo_metadata::MetadataCommand;
 use dorsfile::{Dorsfile, MemberModifiers, Run};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -128,6 +128,8 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         task_name: &str,
         dorsfile: &Dorsfile,
         dir: &Path,
+        already_ran_befores: &mut HashSet<String>,
+        already_ran_afters: &mut HashSet<String>,
         task_runner: &TaskRunner,
     ) -> Result<ExitStatus, Box<dyn Error>> {
         println!("Running task {:?} in {:?}", task_name, dir);
@@ -136,15 +138,42 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             .get(task_name)
             .ok_or(format!("no task '{}' defined", task_name))?;
 
-        Ok(match task.run {
+        let mut result: Option<ExitStatus> = None;
+        if let Some(ref befores) = task.before {
+            // TODO gracefully handle an unknown task name in a before
+            if let Some(task_result) = befores
+                .iter()
+                .filter_map(|before_task_name| {
+                    if !already_ran_befores.contains(before_task_name) {
+                        already_ran_befores.insert(before_task_name.into());
+                        Some(run_task(
+                            before_task_name,
+                            dorsfile,
+                            dir,
+                            already_ran_befores,
+                            already_ran_afters,
+                            task_runner,
+                        ))
+                    } else {
+                        None
+                    }
+                })
+                .take_while_ok()
+                .last()
+            {
+                result.replace(task_result?);
+            }
+        }
+
+        result.replace(match task.run_from {
             Run::Here => run_command(&task.command, dir, &dorsfile.env),
             Run::WorkspaceRoot => {
                 // TODO error gracefully when someone messes this up
                 run_command(&task.command, &task_runner.workspace.root, &dorsfile.env)
             }
-            Run::OnMembers => {
+            Run::Members => {
                 if dir != task_runner.workspace.root {
-                    panic!("cannot run on on-members from outside workspace root");
+                    panic!("cannot run from members from outside workspace root");
                 }
                 task_runner
                     .workspace
@@ -172,10 +201,17 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     .map(|path| {
                         let mut dorsfile = task_runner.dorsfiles.get(&path)?;
                         // avoid infinite loop
-                        if let Run::OnMembers = &dorsfile.task[task_name].run {
-                            dorsfile.task.get_mut(task_name).unwrap().run = Run::Here
+                        if let Run::Members = &dorsfile.task[task_name].run_from {
+                            dorsfile.task.get_mut(task_name).unwrap().run_from = Run::Here
                         }
-                        run_task(task_name, &dorsfile, &path, task_runner)
+                        run_task(
+                            task_name,
+                            &dorsfile,
+                            &path,
+                            &mut HashSet::new(),
+                            &mut HashSet::new(),
+                            task_runner,
+                        )
                     })
                     .take_while_ok()
                     .last()
@@ -184,13 +220,17 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             Run::Path(ref target_path) => {
                 run_command(&task.command, dir.join(target_path), &dorsfile.env)
             }
-        })
+        });
+
+        Ok(result.unwrap())
     }
 
     run_task(
         task,
         &dorsfile,
         &dir,
+        &mut HashSet::new(),
+        &mut HashSet::new(),
         &TaskRunner {
             workspace,
             dorsfiles,

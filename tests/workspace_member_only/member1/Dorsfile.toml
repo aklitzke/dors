@@ -3,12 +3,12 @@ command = "[ ${PWD##*/} == \"member1\" ]"
 
 [task.should-be-here-explicit]
 command = "[ ${PWD##*/} == \"member1\" ]"
-run = "here"
+run-from = "here"
 
 [task.should-be-in-workspace]
 command = "[ ${PWD##*/} == \"workspace_member_only\" ]"
-run = "workspace-root"
+run-from = "workspace-root"
 
 [task.should-be-in-tests]
 command = "[ ${PWD##*/} == \"tests\" ]"
-run = { path = "../.." }
+run-from = { path = "../.." }

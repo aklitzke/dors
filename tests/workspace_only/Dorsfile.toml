@@ -1,14 +1,25 @@
 [task.check]
 command = "cargo check"
-run = "on-members"
+run-from = "members"
 
 [task.should-be-on-member]
 command = '''
 dir=${PWD##*/}
 [ ${dir:0:6} == "member" ]
 '''
-run = "on-members"
+run-from = "members"
 
 [task.should-fail]
 command = "exit 55"
-run = "on-members"
+run-from = "members"
+
+[task.should-run-before-only-once]
+before = ["create-then-delete-file", "create-file"]
+command = "[ ! -f tmp-file ]"
+
+[task.create-then-delete-file]
+before = ["create-file"]
+command = "cat tmp-file && rm tmp-file"
+
+[task.create-file]
+command = "[ ! -f tmp-file ] && touch tmp-file"

@@ -9,7 +9,7 @@ command = "true"
 
 [task.nested-works-with-run-variants]
 command = "[ ${PWD##*/} == \"workspace_all\" ]"
-run = { path = ".." }
+run-from = { path = ".." }
 
 [task.only-member1]
 command = "true"

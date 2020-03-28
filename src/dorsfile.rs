@@ -17,8 +17,10 @@ pub struct Dorsfile {
 #[serde(rename_all = "kebab-case")]
 pub struct Task {
     #[serde(default)]
-    pub run: Run,
+    pub run_from: Run,
     pub command: String,
+    pub before: Option<Vec<String>>,
+    pub after: Option<Vec<String>>,
     #[serde(flatten)]
     pub member_modifiers: Option<MemberModifiers>,
 }
@@ -36,7 +38,7 @@ pub enum Run {
     Here,
     Path(PathBuf),
     WorkspaceRoot,
-    OnMembers,
+    Members,
 }
 impl Default for Run {
     fn default() -> Run {
@@ -65,7 +67,7 @@ HI = "HOW ARE YOU"
 
 [task.build]
 command = "cargo build"
-run = "here"
+run-from = "here"
 
 [task.check]
 command = "cargo check"
@@ -75,7 +77,7 @@ command = '''
     hi one
     hi two
 '''
-run = "on-members"
+run-from = "members"
 skip-members = ["member1"]
 
 [task.skip]
@@ -84,7 +86,7 @@ only-members = ["member2"]
 
 [task.specific]
 command = "echo 'hi'"
-run = { path = "../whaat" }
+run-from = { path = "../whaat" }
 "#;
         let mf = Dorsfile::parse(sample).unwrap();
         println!("{:?}", mf);

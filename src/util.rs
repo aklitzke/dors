@@ -9,6 +9,10 @@ pub trait TakeWhileOkExt: Iterator + Sized {
 
 // Add other iterator types here if you want to use this
 impl<I: Iterator, F, B> TakeWhileOkExt for std::iter::Map<I, F> where F: FnMut(I::Item) -> B {}
+impl<I: Iterator, F, B> TakeWhileOkExt for std::iter::FilterMap<I, F> where
+    F: FnMut(I::Item) -> Option<B>
+{
+}
 
 pub struct TakeWhileOk<I> {
     iter: I,

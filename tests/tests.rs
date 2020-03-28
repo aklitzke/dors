@@ -2,9 +2,13 @@ use dors::{all_tasks, run};
 
 #[test]
 fn test_workspace_only() {
-    ["check", "should-be-on-member"]
-        .iter()
-        .for_each(|task| assert!(run(task, "./tests/workspace_only").unwrap().success()));
+    [
+        "check",
+        "should-be-on-member",
+        "should-run-before-only-once",
+    ]
+    .iter()
+    .for_each(|task| assert!(run(task, "./tests/workspace_only").unwrap().success()));
 }
 
 #[test]
