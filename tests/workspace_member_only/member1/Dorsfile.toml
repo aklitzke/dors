@@ -1,3 +1,6 @@
+[env]
+IS_ONE = "1"
+
 [task.should-be-here]
 command = "[ ${PWD##*/} == \"member1\" ]"
 
@@ -12,3 +15,13 @@ run-from = "workspace-root"
 [task.should-be-in-tests]
 command = "[ ${PWD##*/} == \"tests\" ]"
 run-from = { path = "../.." }
+
+[task.should-be-one]
+command = "[ $IS_ONE == \"1\" ]"
+
+[task.should-be-one-at-root]
+run-from = "workspace-root"
+command = "[ $IS_ONE == \"1\" ]"
+
+[task.should-have-default-env]
+command = "[ ${CARGO_WORKSPACE_ROOT##*/} == \"workspace_member_only\" ]"

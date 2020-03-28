@@ -13,3 +13,6 @@ run-from = { path = ".." }
 
 [task.only-member1]
 command = "true"
+
+[task.should-inherit-envs]
+command = "[ $NUMBER = \"1\" ]"

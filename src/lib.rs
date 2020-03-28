@@ -37,7 +37,7 @@ impl DorsfileGetter {
         }
         let local = crate_path.as_ref().join("./Dorsfile.toml");
 
-        Ok(match (local.exists(), self.workspace_dorsfile.is_some()) {
+        let mut dorsfile = match (local.exists(), self.workspace_dorsfile.is_some()) {
             (true, true) => {
                 // Extend local dorsfile with workspace dorsfile
                 let mut curr = Dorsfile::load(local)?;
@@ -58,7 +58,18 @@ impl DorsfileGetter {
                     "Could not find Dorsfile.toml",
                 )))
             }
-        })
+        };
+
+        let mut env: HashMap<_, _> = [(
+            "CARGO_WORKSPACE_ROOT",
+            self.workspace_root.to_str().unwrap(),
+        )]
+        .iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+        env.extend(dorsfile.env.drain());
+        dorsfile.env = env;
+        Ok(dorsfile)
     }
 }
 
@@ -111,7 +122,7 @@ pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> 
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
     let dir = dir.as_ref().canonicalize().unwrap();
     let workspace = CargoWorkspaceInfo::new(&dir);
-    let dorsfiles = DorsfileGetter::new(&workspace.root).unwrap();
+    let dorsfiles = DorsfileGetter::new(&workspace.root)?;
     let dorsfile = dorsfiles.get(&dir).unwrap();
 
     struct TaskRunner {

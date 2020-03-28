@@ -1,3 +1,6 @@
+[env]
+NUMBER = "1"
+
 [task.check]
 command = "cargo check"
 
@@ -24,3 +27,7 @@ skip-members = ["member2"]
 command = "false"
 run-from = "members"
 only-members = ["member2"]
+
+[task.should-be-one]
+command = "[ $NUMBER == \"2\" ]"
+run-from = "members"

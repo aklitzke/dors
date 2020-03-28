@@ -29,6 +29,9 @@ fn test_member_only() {
         "should-be-here-explicit",
         "should-be-in-workspace",
         "should-be-in-tests",
+        "should-be-one",
+        "should-be-one-at-root",
+        "should-have-default-env",
     ]
     .iter()
     .for_each(|task| {
@@ -46,6 +49,7 @@ fn test_workspace_all() {
         "nested-works-with-run-variants",
         "only-member1",
         "only-member2",
+        "should-be-one",
     ]
     .iter()
     .for_each(|task| assert!(run(task, "./tests/workspace_all").unwrap().success()));
@@ -90,6 +94,7 @@ fn test_list_workspace_all() {
             "nested-works-with-run-variants",
             "only-member1",
             "only-member2",
+            "should-be-one",
             "should-not-overwrite",
             "should-overwrite",
             "should-overwrite-members"

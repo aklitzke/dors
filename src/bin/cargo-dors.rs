@@ -6,14 +6,15 @@ fn main() {
 }
 
 fn app() -> i32 {
+    let about = "No-fuss workspace-aware task runner for rust";
     let app_matches = App::new("dors -- do things, for rust!")
         .bin_name("cargo")
         .version(crate_version!())
         .author("Andrew Klitzke <nafango2@gmail.com>")
-        .about("Workspace-friendly task runner for cargo")
+        .about(about)
         .subcommand(
             SubCommand::with_name("dors")
-            .about("Workspace-friendly task runner for cargo")
+                .about(about)
                 .arg(
                     Arg::with_name("list")
                         .short("l")
@@ -25,13 +26,17 @@ fn app() -> i32 {
                     ArgGroup::with_name("run")
                         .args(&["list", "TASK"])
                         .required(true),
-                )
+                ),
         )
         .get_matches();
 
     let (subcommand_name, matches_opt) = app_matches.subcommand();
     if subcommand_name != "dors" {
-        println!("{}: must invoke dors as `{}`", "Error".red(), "cargo dors".bold());
+        println!(
+            "{}: must invoke dors as `{}`",
+            "Error".red(),
+            "cargo dors".bold()
+        );
         return 1;
     }
 
@@ -44,7 +49,10 @@ fn app() -> i32 {
         return 0;
     }
     if let Some(task) = matches.value_of("TASK") {
-        return dors::run(&task, std::env::current_dir().unwrap()).unwrap().code().unwrap();
+        return dors::run(&task, std::env::current_dir().unwrap())
+            .unwrap()
+            .code()
+            .unwrap();
     }
     1
 }
