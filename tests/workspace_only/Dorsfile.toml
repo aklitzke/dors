@@ -1,0 +1,3 @@
+[task.check]
+command = "cargo check"
+run = "all-members"

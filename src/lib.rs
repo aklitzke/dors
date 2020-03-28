@@ -26,14 +26,16 @@ impl DorsfileGetter {
         let workspace_dorsfile_path = workspace_root.as_ref().join("./Dorsfile.toml");
         Ok(DorsfileGetter {
             workspace_root: workspace_root.as_ref().into(),
-            workspace_dorsfile: match workspace_dorsfile_path.exists() {
-                true => Some(Dorsfile::load(&workspace_dorsfile_path)?),
-                false => None,
+            workspace_dorsfile: if workspace_dorsfile_path.exists() {
+                Some(Dorsfile::load(&workspace_dorsfile_path)?)
+            } else {
+                None
             },
         })
     }
 
     pub fn get<P: AsRef<Path>>(&self, crate_path: P) -> Result<Dorsfile, Box<dyn Error>> {
+        println!("getting: {:?}\nworkspace_root: {:?}", crate_path.as_ref(), self.workspace_root);
         if crate_path.as_ref() == self.workspace_root {
             return Ok(self
                 .workspace_dorsfile
@@ -61,7 +63,9 @@ impl DorsfileGetter {
 }
 
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
-    let metadata = MetadataCommand::new().exec().unwrap();
+    let dir = dir.as_ref().canonicalize().unwrap();
+    println!("running from dir: {:?}", dir);
+    let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
     let workspace_root = metadata.workspace_root.canonicalize().unwrap();
     // allow O(1) referencing of package information
     let packages: HashMap<_, _> = metadata
@@ -85,7 +89,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
     println!("workspace_paths: {:#?}", workspace_paths);
     let dorsfiles = DorsfileGetter::new(&workspace_root).unwrap();
 
-    let dorsfile = dorsfiles.get(dir.as_ref()).unwrap();
+    let dorsfile = dorsfiles.get(&dir).unwrap();
 
     struct TaskRunner {
         workspace_paths: Vec<PathBuf>,
@@ -99,14 +103,15 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         dir: &Path,
         task_runner: &TaskRunner,
     ) -> Result<ExitStatus, Box<dyn Error>> {
-        let task = dorsfile.task.get(task_name).unwrap();
+        println!("Running task {:?} in {:?}", task_name, dir);
+        let task = dorsfile.task.get(task_name).ok_or(format!("no task '{}' defined", task_name))?;
 
         Ok(match task.run {
             Run::Here => run_command(&task.command, dir, &dorsfile.env),
             Run::WorkspaceRoot => {
                 // TODO error gracefully when someone messes this up
                 // run_command(task, metadata.workspace_root, dorsfile.env)
-                run_command(&task.command, &PathBuf::new(), &dorsfile.env)
+                run_command(&task.command, &task_runner.workspace_root, &dorsfile.env)
             }
             Run::AllMembers => {
                 // workspace_members
@@ -117,15 +122,20 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 // setting task = the name of this task,
                 // dorsfile = the thing I loaded for that dir
                 // dir equal to the dir of that workspace
+                println!("Doing all-members");
+                println!("dir: {:?}\nroot: {:?}", dir, task_runner.workspace_root);
                 if dir != task_runner.workspace_root {
                     panic!("cannot run on all-members from outside workspace root");
                 }
                 task_runner
                     .workspace_paths
                     .iter()
-                    // load dorsfiles
                     .map(|path| {
-                        let dorsfile = task_runner.dorsfiles.get(&path)?;
+                        let mut dorsfile = task_runner.dorsfiles.get(&path)?;
+                        // avoid infinite loop
+                        if let AllMembers = &dorsfile.task[task_name].run {
+                            dorsfile.task.get_mut(task_name).unwrap().run = Run::Here
+                        }
                         run_task(task_name, &dorsfile, &path, task_runner)
                     })
                     .take_while(|result| result.is_ok() && result.as_ref().unwrap().success())
@@ -139,7 +149,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
     run_task(
         task,
         &dorsfile,
-        &dir.as_ref(),
+        &dir,
         &TaskRunner {
             workspace_root,
             workspace_paths,
@@ -161,8 +171,12 @@ fn run_command<P: AsRef<Path>>(
         .map(|()| rng.sample(Alphanumeric))
         .take(10)
         .collect();
-    let file = PathBuf::from(format!("tmp-{}.sh", chars));
+    let file = Path::new("./")
+        .canonicalize()
+        .unwrap()
+        .join(format!("tmp-{}.sh", chars));
     std::fs::write(&file, command).unwrap();
+    println!("{:?}", workdir.as_ref().canonicalize());
     let exit_status = Command::new("sh")
         .arg(file.to_str().unwrap())
         .envs(env)
