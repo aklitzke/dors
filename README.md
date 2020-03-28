@@ -37,7 +37,7 @@ Set crate-specific environment variables:
 CARGO_TARGET_DIR = "../target-member-1"
 ```
 
-Inherit command in member crate:
+Reduce duplication by inheriting workspace commands in member crates:
 ```toml
 # ./Dorsfile.toml
 [task.check]
@@ -47,7 +47,7 @@ command = "cargo check --all-targets"
 $ cd shared_code && cargo dors check
 ```
 
-Run on all members of a workspace:
+Run commands on all members of a workspace:
 ```toml
 # ./Dorsfile.toml
 [task.test]
@@ -55,7 +55,7 @@ command = "echo Hello, World! from $PWD"
 run-from = "members"
 ```
 
-Multiline script:
+Run multi-line bash scripts:
 ```toml
 # ./Dorsfile.toml
 [task.play-go]
@@ -65,7 +65,7 @@ telnet $url
 '''
 ```
 
-Dependencies:
+Invoke commands before or after others:
 ```toml
 #./Dorsfile.toml
 [task.play-go]
@@ -107,7 +107,7 @@ run-from = "members"
 only-members = ["shared_code"]
 ```
 
-Run command from member crate on workspace root:
+Run commands from member crate on workspace root:
 ```toml
 # ./embedded_device/Dorsfile.toml
 [task.pre-build]
@@ -115,7 +115,7 @@ run-from = "workspace-root"
 command = "echo interestingstuff > target/special-file"
 ```
 
-Run command from arbirary path:
+Run commands from arbirary paths:
 ```toml
 # ./Dorsfile.toml
 [task.run-other-project]
