@@ -1,3 +1,14 @@
 [task.check]
 command = "cargo check"
 run = "all-members"
+
+[task.should-be-on-member]
+command = '''
+dir=${PWD##*/}
+[ ${dir:0:6} == "member" ]
+'''
+run = "all-members"
+
+[task.should-fail]
+command = "exit 55"
+run = "all-members"

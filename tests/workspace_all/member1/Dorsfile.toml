@@ -1,0 +1,8 @@
+[task.should-overwrite]
+command = "true"
+
+[task.should-not-overwrite]
+command = "exit 55"
+
+[task.should-overwrite-members]
+command = "true"

@@ -1,0 +1,2 @@
+[task.should-overwrite-members]
+command = "true"
