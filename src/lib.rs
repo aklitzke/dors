@@ -139,8 +139,9 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             .ok_or(format!("no task '{}' defined", task_name))?;
 
         let mut result: Option<ExitStatus> = None;
+
+        // Handle befores
         if let Some(ref befores) = task.before {
-            // TODO gracefully handle an unknown task name in a before
             if let Some(task_result) = befores
                 .iter()
                 .filter_map(|before_task_name| {
@@ -151,7 +152,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                             dorsfile,
                             dir,
                             already_ran_befores,
-                            already_ran_afters,
+                            &mut HashSet::new(),
                             task_runner,
                         ))
                     } else {
@@ -165,6 +166,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             }
         }
 
+        // run command
         result.replace(match task.run_from {
             Run::Here => run_command(&task.command, dir, &dorsfile.env),
             Run::WorkspaceRoot => {
@@ -221,6 +223,32 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 run_command(&task.command, dir.join(target_path), &dorsfile.env)
             }
         });
+
+        // handle afters
+        if let Some(ref afters) = task.after {
+            if let Some(task_result) = afters
+                .iter()
+                .filter_map(|after_task_name| {
+                    if !already_ran_afters.contains(after_task_name) {
+                        already_ran_afters.insert(after_task_name.into());
+                        Some(run_task(
+                            after_task_name,
+                            dorsfile,
+                            dir,
+                            &mut HashSet::new(),
+                            already_ran_afters,
+                            task_runner,
+                        ))
+                    } else {
+                        None
+                    }
+                })
+                .take_while_ok()
+                .last()
+            {
+                result.replace(task_result?);
+            }
+        }
 
         Ok(result.unwrap())
     }

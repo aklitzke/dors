@@ -6,6 +6,7 @@ fn test_workspace_only() {
         "check",
         "should-be-on-member",
         "should-run-before-only-once",
+        "should-run-after-only-once",
     ]
     .iter()
     .for_each(|task| assert!(run(task, "./tests/workspace_only").unwrap().success()));

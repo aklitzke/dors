@@ -23,3 +23,15 @@ command = "cat tmp-file && rm tmp-file"
 
 [task.create-file]
 command = "[ ! -f tmp-file ] && touch tmp-file"
+
+[task.should-run-after-only-once]
+before = ["should-run-before-only-once"]
+command = "[ ! -f tmp-file ] && touch tmp-file"
+after = ["delete-file-after", "delete-file-after"]
+
+[task.delete-file-after]
+command = ""
+after = ["delete-file", "delete-file"]
+
+[task.delete-file]
+command = "cat tmp-file && rm tmp-file"
