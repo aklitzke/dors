@@ -1,3 +1,4 @@
+#![deny(clippy::print_stdout)]
 mod dorsfile;
 mod util;
 use cargo_metadata::MetadataCommand;
@@ -27,11 +28,6 @@ impl DorsfileGetter {
     }
 
     pub fn get<P: AsRef<Path>>(&self, crate_path: P) -> Result<Dorsfile, Box<dyn Error>> {
-        println!(
-            "getting: {:?}\nworkspace_root: {:?}",
-            crate_path.as_ref(),
-            self.workspace_root
-        );
         if crate_path.as_ref() == self.workspace_root {
             return Ok(self
                 .workspace_dorsfile
@@ -72,7 +68,6 @@ struct CargoWorkspaceInfo {
 }
 impl CargoWorkspaceInfo {
     fn new(dir: &Path) -> CargoWorkspaceInfo {
-        println!("running from dir: {:?}", dir);
         let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
         let root = metadata.workspace_root.canonicalize().unwrap();
         // allow O(1) referencing of package information
@@ -132,7 +127,6 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         already_ran_afters: &mut HashSet<String>,
         task_runner: &TaskRunner,
     ) -> Result<ExitStatus, Box<dyn Error>> {
-        println!("Running task {:?} in {:?}", task_name, dir);
         let task = dorsfile
             .task
             .get(task_name)
@@ -284,7 +278,6 @@ fn run_command<P: AsRef<Path>>(
         .unwrap()
         .join(format!("tmp-{}.sh", chars));
     std::fs::write(&file, command).unwrap();
-    println!("{:?}", workdir.as_ref().canonicalize());
     let exit_status = Command::new("bash")
         .arg(file.to_str().unwrap())
         .envs(env)

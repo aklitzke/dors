@@ -89,7 +89,6 @@ command = "echo 'hi'"
 run-from = { path = "../whaat" }
 "#;
         let mf = Dorsfile::parse(sample).unwrap();
-        println!("{:?}", mf);
         assert_eq!(mf.task.len(), 5);
         assert_eq!(mf.env.len(), 1);
     }
