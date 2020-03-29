@@ -1,8 +1,7 @@
-[task.check]
-command = "cargo check"
+# Such a simple little Dorsfile for this project!
+# Honestly, this project doesn't need a complicated
+# one. Dors was built with other types of projects
+# in mind.
 
 [task.test-with-output]
 command = "cargo test -- --nocapture"
-
-[task.build]
-command = "cargo build"
