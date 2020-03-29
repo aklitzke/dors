@@ -1,6 +1,6 @@
 # :rainbow: _**Dors more, with Dorsfiles**_ :closed_umbrella:
 
-[![crates.io](![crates.io](https://img.shields.io/crates/v/dors.svg)](https://crates.io/crates/dors)
+[![crates.io](https://img.shields.io/crates/v/dors.svg)](https://crates.io/crates/dors)
 [![Build Status](https://travis-ci.org/aklitzke/dors.svg?branch=master)](https://travis-ci.org/aklitzke/dors)
 
 **What is this?**
