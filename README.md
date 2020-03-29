@@ -154,7 +154,7 @@ execution model, and a different syntax.
 **Q:** Would you accept a PR?  
 **A:** Absolutely!
 
-**Q:** My question wasn't answered here
+**Q:** My question wasn't answered here  
 **A:** Feel free to reach out!
 
 ![An open book](https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/240/apple/237/open-book_1f4d6.png)
