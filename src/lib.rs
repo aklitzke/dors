@@ -1,6 +1,6 @@
 #![deny(clippy::print_stdout)]
 mod dorsfile;
-mod util;
+mod take_while_ext;
 use cargo_metadata::MetadataCommand;
 use dorsfile::{Dorsfile, MemberModifiers, Run};
 use std::collections::{HashMap, HashSet};
@@ -8,7 +8,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::ExitStatus;
-use util::TakeWhileOkExt;
+use take_while_ext::TakeWhileLastExt;
 
 struct DorsfileGetter {
     workspace_root: PathBuf,
@@ -65,6 +65,7 @@ impl DorsfileGetter {
             self.workspace_root.to_str().unwrap(),
         )]
         .iter()
+        .cloned()
         .map(|(key, value)| (key.to_string(), value.to_string()))
         .collect();
         env.extend(dorsfile.env.drain());
@@ -77,6 +78,7 @@ struct CargoWorkspaceInfo {
     members: HashMap<String, PathBuf>,
     root: PathBuf,
 }
+
 impl CargoWorkspaceInfo {
     fn new(dir: &Path) -> CargoWorkspaceInfo {
         let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
@@ -117,6 +119,36 @@ pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> 
         .keys()
         .cloned()
         .collect::<Vec<_>>())
+}
+
+fn run_command<P: AsRef<Path>>(
+    command: &str,
+    workdir: P,
+    env: &HashMap<String, String>,
+) -> ExitStatus {
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
+    use std::iter;
+    let mut rng = thread_rng();
+    let chars: String = iter::repeat(())
+        .map(|()| rng.sample(Alphanumeric))
+        .take(10)
+        .collect();
+    let file = Path::new("./")
+        .canonicalize()
+        .unwrap()
+        .join(format!("tmp-{}.sh", chars));
+    std::fs::write(&file, command).unwrap();
+    let exit_status = Command::new("bash")
+        .arg(file.to_str().unwrap())
+        .envs(env)
+        .current_dir(workdir)
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
+    std::fs::remove_file(file).unwrap();
+    exit_status
 }
 
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
@@ -163,8 +195,12 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     } else {
                         None
                     }
+                    // TODO fix task so that returning >0 from an exit code halts and returns that
+                    // code
+                    // Consider writing better tests for just this recursion
+                    // also consider rewriting take_while_last to accept a closure
                 })
-                .take_while_ok()
+                .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
                 .last()
             {
                 result.replace(task_result?);
@@ -220,7 +256,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                             task_runner,
                         )
                     })
-                    .take_while_ok()
+                    .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
                     .last()
                     .unwrap()?
             }
@@ -248,7 +284,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                         None
                     }
                 })
-                .take_while_ok()
+                .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
                 .last()
             {
                 result.replace(task_result?);
@@ -269,34 +305,4 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             dorsfiles,
         },
     )
-}
-
-fn run_command<P: AsRef<Path>>(
-    command: &str,
-    workdir: P,
-    env: &HashMap<String, String>,
-) -> ExitStatus {
-    use rand::distributions::Alphanumeric;
-    use rand::{thread_rng, Rng};
-    use std::iter;
-    let mut rng = thread_rng();
-    let chars: String = iter::repeat(())
-        .map(|()| rng.sample(Alphanumeric))
-        .take(10)
-        .collect();
-    let file = Path::new("./")
-        .canonicalize()
-        .unwrap()
-        .join(format!("tmp-{}.sh", chars));
-    std::fs::write(&file, command).unwrap();
-    let exit_status = Command::new("bash")
-        .arg(file.to_str().unwrap())
-        .envs(env)
-        .current_dir(workdir)
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
-    std::fs::remove_file(file).unwrap();
-    exit_status
 }

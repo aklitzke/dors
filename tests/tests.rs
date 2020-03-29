@@ -43,16 +43,22 @@ fn test_member_only() {
 
 #[test]
 fn test_workspace_all() {
+    println!("testing workspace all");
     [
         "should-not-overwrite",
         "should-overwrite-members",
         "nested-works-with-run-variants",
         "only-member1",
         "only-member2",
-        "should-be-one",
+        "should-inherit-envs",
     ]
     .iter()
-    .for_each(|task| assert!(run(task, "./tests/workspace_all").unwrap().success()));
+    .for_each(|task| {
+        println!("starting test: {:?}", task);
+        let result = run(task, "./tests/workspace_all").unwrap().success();
+        println!("test result: {:?}", result);
+        assert!(result);
+    });
 }
 
 #[test]
@@ -94,7 +100,7 @@ fn test_list_workspace_all() {
             "nested-works-with-run-variants",
             "only-member1",
             "only-member2",
-            "should-be-one",
+            "should-inherit-envs",
             "should-not-overwrite",
             "should-overwrite",
             "should-overwrite-members"

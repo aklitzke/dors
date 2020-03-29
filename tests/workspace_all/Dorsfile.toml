@@ -28,6 +28,6 @@ command = "false"
 run-from = "members"
 only-members = ["member2"]
 
-[task.should-be-one]
+[task.should-inherit-envs]
 command = "[ $NUMBER == \"2\" ]"
 run-from = "members"
