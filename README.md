@@ -1,5 +1,7 @@
 # :rainbow: _**Dors more, with Dorsfiles**_ :closed_umbrella:
 
+![status](https://travis-ci.org/aklitzke/dors.svg?branch=master)
+
 **What is this?**
 
 A [task runner](https://en.wikipedia.org/wiki/Build_automation) for 

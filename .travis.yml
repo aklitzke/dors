@@ -1,0 +1,16 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+jobs:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+before_install:
+  - rustup component add clippy
+  - cargo install cargo-audit
+script:
+  - cargo test --verbose
+  - cargo clippy -- -D warnings
+  - cargo audit
