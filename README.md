@@ -145,7 +145,7 @@ execution model, and a different syntax.
 **A:** Like 'horse'
 
 **Q:** Shouldn't you just add an 'e' at the end? Like 'dorse'?  
-**A:** Never. Nope. Go to your room. Don't come out till you've learned your lesson.
+**A:** Never. Nope. Go to your room. Don't come out till you've learned your lesson 🙃
 
 **Q:** Do I have to use this with a workspace?  
 **A:** You can use this crate with or without your crate being a workspace.
