@@ -128,14 +128,14 @@ command = "npm run"
 
 ## FAQ:
 
-**Q:** Can I automatically run standard cargo commands?  
+**Q:** Will this automatically provide me with standard cargo commands?  
 **A:** Nope. A blank Dorsfile is a blank Dorsfile. It's up to you to build it out.
 
 **Q:** Is this ready for production?  
 **A:** This is currently in alpha. Use at your own risk.
 
 **Q:** This looks pretty similar to [cargo-make](https://github.com/sagiegurari/cargo-make). What are the differences?  
-**A:** This syntax was inspired by cargo-make, and this project was originally
+**A:** The syntax was inspired by cargo-make, and this project was originally
 started due to limitations in cargo-make's workspace support. This project has different goals, a different task
 execution model, and a different syntax.
 
@@ -153,5 +153,8 @@ execution model, and a different syntax.
 
 **Q:** Would you accept a PR?  
 **A:** Absolutely!
+
+**Q:** My question wasn't answered here
+**A:** Feel free to reach out!
 
 ![An open book](https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/240/apple/237/open-book_1f4d6.png)
