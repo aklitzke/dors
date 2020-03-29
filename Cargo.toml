@@ -1,12 +1,12 @@
 [package]
 name = "dors"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Andrew Klitzke <andrewknpe@gmail.com>"]
 edition = "2018"
-description = "No fuss, workspace-friendly task runner for cargo"
+description = "No-fuss workspace-friendly task runner for cargo"
 repository = "https://github.com/aklitzke/dors"
-homepage = "https://github.com/aklitzke/dors"
 license = "MIT OR Apache-2.0"
+readme = "README.md"
 
 [dependencies]
 toml = "0.5"
