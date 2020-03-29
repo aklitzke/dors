@@ -6,6 +6,7 @@ edition = "2018"
 description = "No fuss, workspace-friendly task runner for cargo"
 repository = "https://github.com/aklitzke/dors"
 homepage = "https://github.com/aklitzke/dors"
+license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
