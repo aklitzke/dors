@@ -10,7 +10,7 @@ fn app() -> i32 {
     let app_matches = App::new("dors -- do things, for rust!")
         .bin_name("cargo")
         .version(crate_version!())
-        .author("Andrew Klitzke <nafango2@gmail.com>")
+        .author("Andrew Klitzke <andrewknpe@gmail.com>")
         .about(about)
         .subcommand(
             SubCommand::with_name("dors")
