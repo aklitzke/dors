@@ -162,6 +162,10 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         dorsfiles: DorsfileGetter,
     }
 
+    // Execute tasks in a big recursive loop
+    // Rust's support for recursion isn't great, so we have to pass
+    // a lot of context into this recursive function, which explains
+    // things like `TaskRunner`
     fn run_task(
         task_name: &str,
         dorsfile: &Dorsfile,
@@ -294,6 +298,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         Ok(result.unwrap())
     }
 
+    // seed recursion
     run_task(
         task,
         &dorsfile,
