@@ -30,6 +30,14 @@ $ cargo install dors
 
 ## Features
 
+Run commands on all members of a workspace:
+```toml
+# ./Dorsfile.toml
+[task.test]
+command = "echo Hello, World! from $PWD"
+run-from = "members"
+```
+
 Set crate-specific environment variables:
 ```toml
 # ./member-1/Dorsfile
@@ -45,14 +53,6 @@ command = "cargo check --all-targets"
 ```
 ```bash
 $ cd shared_code && cargo dors check
-```
-
-Run commands on all members of a workspace:
-```toml
-# ./Dorsfile.toml
-[task.test]
-command = "echo Hello, World! from $PWD"
-run-from = "members"
 ```
 
 Run multi-line bash scripts:
