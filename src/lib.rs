@@ -121,6 +121,7 @@ fn run_command<P: AsRef<Path>>(
         .join(format!("tmp-{}.sh", chars));
     std::fs::write(&file, command).unwrap();
     let exit_status = Command::new("bash")
+        .arg("-e")
         .arg(file.to_str().unwrap())
         .envs(env)
         .current_dir(workdir)

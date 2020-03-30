@@ -1,4 +1,4 @@
-use clap::{crate_version, App, Arg, ArgGroup, SubCommand};
+use clap::{App, Arg, ArgGroup, SubCommand};
 use colored::Colorize;
 
 fn main() {
@@ -9,11 +9,12 @@ fn app() -> i32 {
     let about = "No-fuss workspace-aware task runner for rust";
     let app_matches = App::new("dors -- do things, for rust!")
         .bin_name("cargo")
-        .version(crate_version!())
+        .version(env!("CARGO_PKG_VERSION"))
         .author("Andrew Klitzke <andrewknpe@gmail.com>")
         .about(about)
         .subcommand(
             SubCommand::with_name("dors")
+                .version(env!("CARGO_PKG_VERSION"))
                 .about(about)
                 .arg(
                     Arg::with_name("list")
@@ -69,19 +70,12 @@ fn app() -> i32 {
     };
     tasks.sort();
 
-    if !matches.is_present("list") {
-        println!(
-            "{}: {}",
-            "Error".red(),
-            "Please select a task to run:".bold()
-        );
+    if matches.is_present("list") {
+        tasks.iter().for_each(|task| println!("{}", task));
+        return 0;
     }
 
-    tasks.iter().for_each(|task| println!("{}", task));
-
-    if !matches.is_present("list") {
-        1
-    } else {
-        0
-    }
+    println!("{}: Please select a task to run:", "Error".red());
+    tasks.iter().for_each(|task| println!("{}", task.bold()));
+    1
 }

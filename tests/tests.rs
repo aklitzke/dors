@@ -15,12 +15,14 @@ fn test_workspace_only() {
 
 #[test]
 fn test_workspace_failures() {
-    ["should-fail"].iter().for_each(|task| {
-        assert_eq!(
-            run(task, "./tests/workspace_only").unwrap().code().unwrap(),
-            55
-        )
-    });
+    ["should-fail", "should-fail-in-multiline"]
+        .iter()
+        .for_each(|task| {
+            assert_eq!(
+                run(task, "./tests/workspace_only").unwrap().code().unwrap(),
+                55
+            )
+        });
 }
 
 #[test]

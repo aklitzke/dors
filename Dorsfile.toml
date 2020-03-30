@@ -1,7 +1,15 @@
 # Such a simple little Dorsfile for this project!
-# Honestly, this project doesn't need a complicated
+# This project doesn't need a complicated
 # one. Dors was built with other types of projects
 # in mind.
 
 [task.test-with-output]
 command = "cargo test -- --nocapture"
+
+# Easily do ci tests locally
+[task.ci]
+command = '''
+cargo test
+cargo clippy -- -D warnings
+cargo audit
+'''

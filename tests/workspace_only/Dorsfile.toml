@@ -35,3 +35,10 @@ after = ["delete-file", "delete-file"]
 
 [task.delete-file]
 command = "cat tmp-file && rm tmp-file"
+
+[task.should-fail-in-multiline]
+command = '''
+true
+sh -c 'exit 55'
+true
+'''
