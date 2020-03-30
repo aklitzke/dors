@@ -9,7 +9,13 @@ command = "cargo test -- --nocapture"
 # Easily do ci tests locally
 [task.ci]
 command = '''
-cargo test
+# Test that we can upgrade from the last version
+cargo install --path .
+
+# Invoke dors from fresh cargo
+cargo dors test-with-output
+
+# Run extra build checks
 cargo clippy -- -D warnings
 cargo audit
 '''

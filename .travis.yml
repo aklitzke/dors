@@ -11,6 +11,5 @@ before_install:
   - rustup component add clippy
   - cargo install cargo-audit
 script:
-  - cargo test --verbose
-  - cargo clippy -- -D warnings
-  - cargo audit
+  - cargo install dors
+  - cargo dors ci
