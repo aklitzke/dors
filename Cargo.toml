@@ -8,6 +8,9 @@ repository = "https://github.com/aklitzke/dors"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
+[badges]
+travis-ci = { repository = "aklitzke/dors" }
+
 [dependencies]
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
