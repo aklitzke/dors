@@ -1,3 +1,4 @@
+use dors::DorsError;
 use dors::{all_tasks, run};
 
 #[test]
@@ -106,4 +107,43 @@ fn test_list_workspace_all() {
             "should-overwrite-members"
         ]
     );
+}
+
+#[test]
+fn test_no_task() {
+    let err = run("fake-task", "tests/workspace_all").unwrap_err();
+    assert!(matches!(
+        err.kind(),
+        DorsError::NoTask(task_name) if task_name == "fake-task"
+    ));
+}
+
+#[test]
+fn test_no_dorsfiles() {
+    // since writing is occurring, careful not to use ths dir outside this test!
+    let tmp_file = "tests/no_dorsfiles/Dorsfile.toml";
+
+    assert!(matches!(
+        all_tasks("./tests/no_dorsfiles").unwrap_err().kind(),
+        DorsError::NoDorsfile
+    ));
+
+    assert!(matches!(
+        run("", "tests/no_dorsfiles/member1").unwrap_err().kind(),
+        DorsError::NoMemberDorsfile
+    ));
+
+    std::fs::write(tmp_file, b"invalid-syntax").unwrap();
+    assert!(matches!(
+        all_tasks("tests/no_dorsfiles").unwrap_err().kind(),
+        DorsError::CouldNotParseDorsfile(_)
+    ));
+
+    std::fs::write(tmp_file, b"[task.a]\nunexpected-field=1").unwrap();
+    assert!(matches!(
+        all_tasks("tests/no_dorsfiles").unwrap_err().kind(),
+        DorsError::CouldNotParseDorsfile(_)
+    ));
+
+    std::fs::remove_file(tmp_file).unwrap();
 }

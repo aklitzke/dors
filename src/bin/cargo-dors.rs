@@ -22,11 +22,7 @@ fn app() -> i32 {
                         .help("list all the available tasks"),
                 )
                 .arg(Arg::with_name("TASK").help("the name of the task to run"))
-                .group(
-                    ArgGroup::with_name("run")
-                        .args(&["list", "TASK"])
-                        .required(true),
-                ),
+                .group(ArgGroup::with_name("run").args(&["list", "TASK"])),
         )
         .get_matches();
 
@@ -43,16 +39,49 @@ fn app() -> i32 {
     let matches = matches_opt.unwrap();
 
     if matches.is_present("list") {
-        let mut tasks = dors::all_tasks(std::env::current_dir().unwrap()).unwrap();
+        let mut tasks = match dors::all_tasks(std::env::current_dir().unwrap()) {
+            Ok(tasks) => tasks,
+            Err(e) => {
+                println!("{}", e);
+                return 1;
+            }
+        };
         tasks.sort();
         tasks.iter().for_each(|task| println!("{}", task));
         return 0;
     }
     if let Some(task) = matches.value_of("TASK") {
-        return dors::run(&task, std::env::current_dir().unwrap())
-            .unwrap()
-            .code()
-            .unwrap();
+        match dors::run(&task, std::env::current_dir().unwrap()) {
+            Ok(resp) => return resp.code().unwrap(),
+            Err(e) => {
+                println!("{}", e);
+                return 1;
+            }
+        }
     }
-    1
+
+    let mut tasks = match dors::all_tasks(std::env::current_dir().unwrap()) {
+        Ok(tasks) => tasks,
+        Err(e) => {
+            println!("{}", e);
+            return 1;
+        }
+    };
+    tasks.sort();
+
+    if !matches.is_present("list") {
+        println!(
+            "{}: {}",
+            "Error".red(),
+            "Please select a task to run:".bold()
+        );
+    }
+
+    tasks.iter().for_each(|task| println!("{}", task));
+
+    if !matches.is_present("list") {
+        1
+    } else {
+        0
+    }
 }

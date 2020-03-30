@@ -1,6 +1,6 @@
+use crate::error::{DorsError, Error};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
@@ -48,10 +48,20 @@ impl Default for Run {
 
 impl Dorsfile {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Dorsfile, Box<dyn Error>> {
-        Self::parse(read_to_string(path.as_ref())?.as_str())
+        let file = match read_to_string(path.as_ref()) {
+            Ok(file) => file,
+            Err(e) => {
+                return Err(match e.kind() {
+                    std::io::ErrorKind::NotFound => DorsError::NoDorsfile,
+                    _ => DorsError::Unknown(e.into()),
+                }
+                .into())
+            }
+        };
+        Self::parse(file.as_str())
     }
     pub fn parse(s: &str) -> Result<Dorsfile, Box<dyn Error>> {
-        Ok(toml::from_str(s)?)
+        Ok(toml::from_str(s).map_err(DorsError::CouldNotParseDorsfile)?)
     }
 }
 

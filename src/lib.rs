@@ -1,15 +1,17 @@
 #![deny(clippy::print_stdout)]
 mod dorsfile;
+mod error;
 mod take_while_ext;
+pub use crate::error::{DorsError, Error};
 use cargo_metadata::MetadataCommand;
 use dorsfile::{Dorsfile, MemberModifiers, Run};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::ExitStatus;
 use take_while_ext::TakeWhileLastExt;
 
+#[derive(Debug)]
 struct DorsfileGetter {
     workspace_root: PathBuf,
     workspace_dorsfile: Option<Dorsfile>,
@@ -28,14 +30,15 @@ impl DorsfileGetter {
     }
 
     pub fn get<P: AsRef<Path>>(&self, crate_path: P) -> Result<Dorsfile, Box<dyn Error>> {
-        if crate_path.as_ref() == self.workspace_root {
+        let crate_path = crate_path.as_ref();
+        if crate_path.canonicalize().unwrap() == self.workspace_root.canonicalize().unwrap() {
             return Ok(self
                 .workspace_dorsfile
                 .as_ref()
                 .cloned()
-                .ok_or("no workspace dorsfile")?);
+                .ok_or(DorsError::NoDorsfile)?);
         }
-        let local = crate_path.as_ref().join("./Dorsfile.toml");
+        let local = crate_path.join("./Dorsfile.toml");
 
         let mut dorsfile = match (local.exists(), self.workspace_dorsfile.is_some()) {
             (true, true) => {
@@ -52,12 +55,7 @@ impl DorsfileGetter {
             }
             (true, false) => Dorsfile::load(local)?,
             (false, true) => self.workspace_dorsfile.as_ref().cloned().unwrap(),
-            (false, false) => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "Could not find Dorsfile.toml",
-                )))
-            }
+            (false, false) => return Err(DorsError::NoMemberDorsfile.into()),
         };
 
         let mut env: HashMap<_, _> = [(
@@ -82,7 +80,7 @@ struct CargoWorkspaceInfo {
 impl CargoWorkspaceInfo {
     fn new(dir: &Path) -> CargoWorkspaceInfo {
         let metadata = MetadataCommand::new().current_dir(&dir).exec().unwrap();
-        let root = metadata.workspace_root.canonicalize().unwrap();
+        let root = metadata.workspace_root;
         // allow O(1) referencing of package information
         let packages: HashMap<_, _> = metadata
             .packages
@@ -96,29 +94,12 @@ impl CargoWorkspaceInfo {
                 let package = packages[&member];
                 (
                     package.name.clone(),
-                    package
-                        .manifest_path
-                        .canonicalize()
-                        .unwrap()
-                        .parent()
-                        .unwrap()
-                        .into(),
+                    package.manifest_path.parent().unwrap().into(),
                 )
             })
             .collect();
         CargoWorkspaceInfo { members, root }
     }
-}
-
-pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> {
-    let workspace = CargoWorkspaceInfo::new(dir.as_ref());
-    let dorsfiles = DorsfileGetter::new(&workspace.root).unwrap();
-    Ok(dorsfiles
-        .get(dir.as_ref())?
-        .task
-        .keys()
-        .cloned()
-        .collect::<Vec<_>>())
 }
 
 fn run_command<P: AsRef<Path>>(
@@ -151,11 +132,22 @@ fn run_command<P: AsRef<Path>>(
     exit_status
 }
 
+pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> {
+    let workspace = CargoWorkspaceInfo::new(dir.as_ref());
+    let dorsfiles = DorsfileGetter::new(&workspace.root)?;
+    Ok(dorsfiles
+        .get(dir.as_ref())?
+        .task
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>())
+}
+
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
-    let dir = dir.as_ref().canonicalize().unwrap();
+    let dir = dir.as_ref();
     let workspace = CargoWorkspaceInfo::new(&dir);
     let dorsfiles = DorsfileGetter::new(&workspace.root)?;
-    let dorsfile = dorsfiles.get(&dir).unwrap();
+    let dorsfile = dorsfiles.get(&dir)?;
 
     struct TaskRunner {
         workspace: CargoWorkspaceInfo,
@@ -177,7 +169,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         let task = dorsfile
             .task
             .get(task_name)
-            .ok_or(format!("no task '{}' defined", task_name))?;
+            .ok_or_else(|| DorsError::NoTask(task_name.to_string()))?;
 
         let mut result: Option<ExitStatus> = None;
 
@@ -219,7 +211,8 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 run_command(&task.command, &task_runner.workspace.root, &dorsfile.env)
             }
             Run::Members => {
-                if dir != task_runner.workspace.root {
+                if dir.canonicalize().unwrap() != task_runner.workspace.root.canonicalize().unwrap()
+                {
                     panic!("cannot run from members from outside workspace root");
                 }
                 task_runner
