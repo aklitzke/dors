@@ -118,7 +118,7 @@ run-from = "workspace-root"
 command = "echo interestingstuff > target/special-file"
 ```
 
-Run commands from arbirary paths:
+Run commands from arbitrary paths:
 ```toml
 # ./Dorsfile.toml
 [task.run-other-project]
