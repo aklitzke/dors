@@ -35,10 +35,10 @@ impl fmt::Display for DorsError {
             DorsError::CouldNotParseDorsfile(e) => write!(f, "Could not parse dorsfile: {}", e),
             DorsError::NoDorsfile => {
                 // TODO offer to create one
-                write!(f, "Expected `Dorsfile.rs`")
+                write!(f, "Expected `Dorsfile.toml`")
             }
             DorsError::NoMemberDorsfile => {
-                write!(f, "Need Dorsfile.rs at either member or workspace root.")
+                write!(f, "Need Dorsfile.toml at either member or workspace root.")
             }
             DorsError::NoTask(task) => write!(f, "No task named: `{}`", task),
             DorsError::Unknown(e) => write!(f, "Error: {}", e),
