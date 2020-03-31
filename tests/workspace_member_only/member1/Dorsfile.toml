@@ -2,26 +2,26 @@
 IS_ONE = "1"
 
 [task.should-be-here]
-command = "[ ${PWD##*/} == \"member1\" ]"
+command = '[ ${PWD##*/} == "member1" ]'
 
 [task.should-be-here-explicit]
-command = "[ ${PWD##*/} == \"member1\" ]"
+command = '[ ${PWD##*/} == "member1" ]'
 run-from = "here"
 
 [task.should-be-in-workspace]
-command = "[ ${PWD##*/} == \"workspace_member_only\" ]"
+command = '[ ${PWD##*/} == "workspace_member_only" ]'
 run-from = "workspace-root"
 
 [task.should-be-in-tests]
-command = "[ ${PWD##*/} == \"tests\" ]"
+command = '[ ${PWD##*/} == "tests" ]'
 run-from = { path = "../.." }
 
 [task.should-be-one]
-command = "[ $IS_ONE == \"1\" ]"
+command = '[ $IS_ONE == "1" ]'
 
 [task.should-be-one-at-root]
 run-from = "workspace-root"
-command = "[ $IS_ONE == \"1\" ]"
+command = '[ $IS_ONE == "1" ]'
 
 [task.should-have-default-env]
-command = "[ ${CARGO_WORKSPACE_ROOT##*/} == \"workspace_member_only\" ]"
+command = '[ ${CARGO_WORKSPACE_ROOT##*/} == "workspace_member_only" ]'

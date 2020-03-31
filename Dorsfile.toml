@@ -19,3 +19,6 @@ cargo dors test-with-output
 cargo clippy -- -D warnings
 cargo audit
 '''
+
+[task.say-hi]
+command = 'echo Hello, "$@"!'

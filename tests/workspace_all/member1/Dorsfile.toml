@@ -8,11 +8,11 @@ command = "exit 55"
 command = "true"
 
 [task.nested-works-with-run-variants]
-command = "[ ${PWD##*/} == \"workspace_all\" ]"
+command = '[ ${PWD##*/} == "workspace_all" ]'
 run-from = { path = ".." }
 
 [task.only-member1]
 command = "true"
 
 [task.should-inherit-envs]
-command = "[ $NUMBER = \"1\" ]"
+command = '[ $NUMBER = "1" ]'

@@ -1,5 +1,5 @@
 use dors::DorsError;
-use dors::{all_tasks, run};
+use dors::{all_tasks, run, run_with_args};
 
 #[test]
 fn test_workspace_only() {
@@ -46,7 +46,6 @@ fn test_member_only() {
 
 #[test]
 fn test_workspace_all() {
-    println!("testing workspace all");
     [
         "should-not-overwrite",
         "should-overwrite-members",
@@ -54,24 +53,36 @@ fn test_workspace_all() {
         "only-member1",
         "only-member2",
         "should-inherit-envs",
+        "should-have-no-args",
     ]
     .iter()
     .for_each(|task| {
-        println!("starting test: {:?}", task);
         let result = run(task, "./tests/workspace_all").unwrap().success();
-        println!("test result: {:?}", result);
         assert!(result);
     });
 }
 
 #[test]
+fn test_workspace_all_args() {
+    assert!(run_with_args(
+        "should-pass-args",
+        "tests/workspace_all",
+        &["".to_string(), "2".to_string()]
+    )
+    .unwrap()
+    .success());
+}
+
+#[test]
 fn test_workspace_all_failures() {
-    ["should-overwrite"].iter().for_each(|task| {
-        assert_eq!(
-            run(task, "./tests/workspace_all").unwrap().code().unwrap(),
-            55
-        )
-    });
+    ["should-overwrite", "should-fail", "should-pass-args"]
+        .iter()
+        .for_each(|task| {
+            assert_eq!(
+                run(task, "./tests/workspace_all").unwrap().code().unwrap(),
+                55
+            )
+        });
     ["should-overwrite"].iter().for_each(|task| {
         assert_eq!(
             run(task, "./tests/workspace_all/member2")
@@ -103,10 +114,13 @@ fn test_list_workspace_all() {
             "nested-works-with-run-variants",
             "only-member1",
             "only-member2",
+            "should-fail",
+            "should-have-no-args",
             "should-inherit-envs",
             "should-not-overwrite",
             "should-overwrite",
-            "should-overwrite-members"
+            "should-overwrite-members",
+            "should-pass-args",
         ]
     );
 }

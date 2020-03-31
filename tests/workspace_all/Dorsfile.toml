@@ -10,6 +10,11 @@ command = "exit 55"
 [task.should-not-overwrite]
 command = "true"
 
+[task.should-fail]
+before = ["should-not-overwrite"]
+command = "exit 55"
+after = ["should-not-overwrite"]
+
 [task.should-overwrite-members]
 command = "exit 55"
 run-from = "members"
@@ -29,5 +34,14 @@ run-from = "members"
 only-members = ["member2"]
 
 [task.should-inherit-envs]
-command = "[ $NUMBER == \"2\" ]"
+command = '[ $NUMBER == "2" ]'
 run-from = "members"
+
+[task.should-pass-args]
+before = ["should-have-no-args"]
+command = '[[ $2 == "2" ]] || exit 55'
+run-from = "members"
+after = ["should-have-no-args"]
+
+[task.should-have-no-args]
+command = '[[ "$@" == "" ]]'

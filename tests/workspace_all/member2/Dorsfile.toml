@@ -5,7 +5,7 @@ NUMBER = "2"
 command = "true"
 
 [task.nested-works-with-run-variants]
-command = "[ ${PWD##*/} == \"workspace_all\" ]"
+command = '[ ${PWD##*/} == "workspace_all" ]'
 run-from = "workspace-root"
 
 [task.only-member2]

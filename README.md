@@ -48,6 +48,16 @@ Set crate-specific environment variables:
 CARGO_TARGET_DIR = "../target-member-1"
 ```
 
+Pass arguments:
+```toml
+[task.say-hi]
+command = 'echo Hello, "$@"!'
+```
+```bash
+$ cargo dors say-hi -- Fellow Human
+Hello, Fellow Human!
+```
+
 Reduce duplication by inheriting workspace commands in member crates:
 ```toml
 # ./Dorsfile.toml

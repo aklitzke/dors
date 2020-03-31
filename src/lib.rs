@@ -2,7 +2,9 @@
 mod dorsfile;
 mod error;
 mod take_while_ext;
+
 pub use crate::error::{DorsError, Error};
+
 use cargo_metadata::MetadataCommand;
 use dorsfile::{Dorsfile, MemberModifiers, Run};
 use std::collections::{HashMap, HashSet};
@@ -102,10 +104,11 @@ impl CargoWorkspaceInfo {
     }
 }
 
-fn run_command<P: AsRef<Path>>(
+fn run_command(
     command: &str,
-    workdir: P,
+    workdir: &Path,
     env: &HashMap<String, String>,
+    args: &[String],
 ) -> ExitStatus {
     use rand::distributions::Alphanumeric;
     use rand::{thread_rng, Rng};
@@ -123,6 +126,7 @@ fn run_command<P: AsRef<Path>>(
     let exit_status = Command::new("bash")
         .arg("-e")
         .arg(file.to_str().unwrap())
+        .args(args)
         .envs(env)
         .current_dir(workdir)
         .spawn()
@@ -145,6 +149,14 @@ pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> 
 }
 
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
+    run_with_args(task, dir, &[])
+}
+
+pub fn run_with_args<P: AsRef<Path>>(
+    task: &str,
+    dir: P,
+    args: &[String],
+) -> Result<ExitStatus, Box<dyn Error>> {
     let dir = dir.as_ref();
     let workspace = CargoWorkspaceInfo::new(&dir);
     let dorsfiles = DorsfileGetter::new(&workspace.root)?;
@@ -159,10 +171,12 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
     // Rust's support for recursion isn't great, so we have to pass
     // a lot of context into this recursive function, which explains
     // things like `TaskRunner`
+    // TODO Consider rewriting into an iterator
     fn run_task(
         task_name: &str,
         dorsfile: &Dorsfile,
         dir: &Path,
+        args: &[String],
         already_ran_befores: &mut HashSet<String>,
         already_ran_afters: &mut HashSet<String>,
         task_runner: &TaskRunner,
@@ -172,11 +186,9 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
             .get(task_name)
             .ok_or_else(|| DorsError::NoTask(task_name.to_string()))?;
 
-        let mut result: Option<ExitStatus> = None;
-
         // Handle befores
         if let Some(ref befores) = task.before {
-            if let Some(task_result) = befores
+            if let Some(befores_result) = befores
                 .iter()
                 .filter_map(|before_task_name| {
                     if !already_ran_befores.contains(before_task_name) {
@@ -185,6 +197,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                             before_task_name,
                             dorsfile,
                             dir,
+                            &[],
                             already_ran_befores,
                             &mut HashSet::new(),
                             task_runner,
@@ -192,24 +205,27 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     } else {
                         None
                     }
-                    // TODO fix task so that returning >0 from an exit code halts and returns that
-                    // code
-                    // Consider writing better tests for just this recursion
-                    // also consider rewriting take_while_last to accept a closure
                 })
                 .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
                 .last()
             {
-                result.replace(task_result?);
+                if befores_result.is_err() || !befores_result.as_ref().unwrap().success() {
+                    return befores_result;
+                }
             }
         }
 
         // run command
-        result.replace(match task.run_from {
-            Run::Here => run_command(&task.command, dir, &dorsfile.env),
+        let result = match task.run_from {
+            Run::Here => run_command(&task.command, dir, &dorsfile.env, args),
             Run::WorkspaceRoot => {
                 // TODO error gracefully when someone messes this up
-                run_command(&task.command, &task_runner.workspace.root, &dorsfile.env)
+                run_command(
+                    &task.command,
+                    &task_runner.workspace.root,
+                    &dorsfile.env,
+                    args,
+                )
             }
             Run::Members => {
                 if dir.canonicalize().unwrap() != task_runner.workspace.root.canonicalize().unwrap()
@@ -249,6 +265,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                             task_name,
                             &dorsfile,
                             &path,
+                            args,
                             &mut HashSet::new(),
                             &mut HashSet::new(),
                             task_runner,
@@ -259,13 +276,17 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                     .unwrap()?
             }
             Run::Path(ref target_path) => {
-                run_command(&task.command, dir.join(target_path), &dorsfile.env)
+                run_command(&task.command, &dir.join(target_path), &dorsfile.env, args)
             }
-        });
+        };
+
+        if !result.success() {
+            return Ok(result);
+        }
 
         // handle afters
         if let Some(ref afters) = task.after {
-            if let Some(task_result) = afters
+            if let Some(afters_result) = afters
                 .iter()
                 .filter_map(|after_task_name| {
                     if !already_ran_afters.contains(after_task_name) {
@@ -274,6 +295,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                             after_task_name,
                             dorsfile,
                             dir,
+                            &[],
                             &mut HashSet::new(),
                             already_ran_afters,
                             task_runner,
@@ -285,11 +307,13 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
                 .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
                 .last()
             {
-                result.replace(task_result?);
+                if afters_result.is_err() || !afters_result.as_ref().unwrap().success() {
+                    return afters_result;
+                }
             }
         }
 
-        Ok(result.unwrap())
+        Ok(result)
     }
 
     // seed recursion
@@ -297,6 +321,7 @@ pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Err
         task,
         &dorsfile,
         &dir,
+        args,
         &mut HashSet::new(),
         &mut HashSet::new(),
         &TaskRunner {
