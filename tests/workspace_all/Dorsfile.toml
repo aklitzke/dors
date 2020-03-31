@@ -45,3 +45,9 @@ after = ["should-have-no-args"]
 
 [task.should-have-no-args]
 command = '[[ "$@" == "" ]]'
+
+[task.should-not-run-before-or-after-on-member]
+before = ["should-not-overwrite"]
+command = "true"
+after = ["should-not-overwrite"]
+run-from = "members"

@@ -49,6 +49,14 @@ impl DorsfileGetter {
                 let workspace_dorsfile = self.workspace_dorsfile.as_ref().unwrap();
                 let mut env = workspace_dorsfile.env.clone();
                 let mut task = workspace_dorsfile.task.clone();
+
+                // Clear all befores and afters from member task
+                // so that they are not ran on both member and workspace root
+                task.values_mut().for_each(|task| {
+                    task.before = None;
+                    task.after = None
+                });
+
                 env.extend(curr.env.drain());
                 task.extend(curr.task.drain());
                 curr.env = env;
@@ -60,6 +68,7 @@ impl DorsfileGetter {
             (false, false) => return Err(DorsError::NoMemberDorsfile.into()),
         };
 
+        // extend environment
         let mut env: HashMap<_, _> = [(
             "CARGO_WORKSPACE_ROOT",
             self.workspace_root.to_str().unwrap(),
