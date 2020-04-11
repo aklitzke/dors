@@ -37,9 +37,10 @@ impl fmt::Display for DorsError {
                 // TODO offer to create one
                 write!(f, "Expected `Dorsfile.toml`")
             }
-            DorsError::NoMemberDorsfile => {
-                write!(f, "Need Dorsfile.toml at either member or workspace root.")
-            }
+            DorsError::NoMemberDorsfile => write!(
+                f,
+                "Need `Dorsfile.toml` at either member or workspace root."
+            ),
             DorsError::NoTask(task) => write!(f, "No task named: `{}`", task),
             DorsError::Unknown(e) => write!(f, "Error: {}", e),
         }
