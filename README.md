@@ -4,7 +4,7 @@
 
 **What is this?**
 
-A [task runner](https://en.wikipedia.org/wiki/Build_automation) for 
+A [task runner](https://en.wikipedia.org/wiki/Build_automation) for
 the [rust](https://www.rust-lang.org/) and [cargo](https://github.com/rust-lang/cargo)
 ecosystem.
 
