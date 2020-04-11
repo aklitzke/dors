@@ -166,11 +166,6 @@ command = "npm run"
 **Q:** Is this ready for production?  
 **A:** This is currently in alpha. Use at your own risk.
 
-**Q:** This looks pretty similar to [cargo-make](https://github.com/sagiegurari/cargo-make). What are the differences?  
-**A:** The syntax was inspired by cargo-make, and this project was originally
-started due to limitations in cargo-make's workspace support. This project has different goals, a different task
-execution model, and a different syntax.
-
 **Q:** How do you pronounce this?  
 **A:** Like 'horse'
 
