@@ -95,7 +95,7 @@ impl DorsfileGetter {
         };
 
         // extend environment
-        let inner_env: HashMap<_, _> = [(
+        let builtins: HashMap<_, _> = [(
             "CARGO_WORKSPACE_ROOT",
             self.workspace_root.to_str().unwrap(),
         )]
@@ -103,7 +103,7 @@ impl DorsfileGetter {
         .cloned()
         .map(|(key, value)| (key.to_string(), value.to_string()))
         .collect();
-        let mut env = vec![inner_env];
+        let mut env = vec![builtins];
         env.extend(dorsfile.env.drain(..));
         dorsfile.env = env;
         Ok(dorsfile)

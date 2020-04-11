@@ -47,7 +47,7 @@ run-from = "members"
 [[env]]
 CARGO_TARGET_DIR = "../target-member-1"
 ```
-Dors will automatically assign `CARGO_WORKSPACE_ROOT` for you. $PWD, $HOME, and other
+Dors will automatically assign `CARGO_WORKSPACE_ROOT` for you. `$PWD`, `$HOME`, and other
 environment variables work as expected.
 
 #### Assign environment variables with bash:
@@ -110,7 +110,7 @@ command = "sudo apt-get install -y --no-install-recommends telnet"
 [task.congratulate]
 command = "echo 'I hope you played well!'"
 ```
-Befores/afters are ran from left to right. If a task is repeated in a tree of befores,
+Before/after tasks are ran from left to right. If a task is repeated in the tree,
 it will only be ran once.
 
 #### Override workspace tasks for a single workspace member:
