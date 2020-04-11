@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 #[derive(Deserialize, Debug, Clone)]
 pub struct Dorsfile {
     #[serde(default)]
-    pub env: HashMap<String, String>,
+    pub env: Vec<HashMap<String, String>>,
     #[serde(default)]
     pub task: HashMap<String, Task>,
 }
@@ -18,6 +18,7 @@ pub struct Dorsfile {
 pub struct Task {
     #[serde(default)]
     pub run_from: Run,
+    #[serde(default)]
     pub command: String,
     pub before: Option<Vec<String>>,
     pub after: Option<Vec<String>>,
@@ -72,7 +73,7 @@ mod tests {
     #[test]
     fn test_load_dorsfile() {
         let sample = r#"
-[env]
+[[env]]
 HI = "HOW ARE YOU"
 
 [task.build]
@@ -97,9 +98,11 @@ only-members = ["member2"]
 [task.specific]
 command = "echo 'hi'"
 run-from = { path = "../whaat" }
+
+[task.empty]
 "#;
         let mf = Dorsfile::parse(sample).unwrap();
-        assert_eq!(mf.task.len(), 5);
+        assert_eq!(mf.task.len(), 6);
         assert_eq!(mf.env.len(), 1);
     }
 }

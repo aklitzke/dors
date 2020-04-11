@@ -33,7 +33,7 @@ $ cargo install dors
 
 ## Features
 
-Run commands on all members of a workspace:
+#### Run tasks on all members of a workspace:
 ```toml
 # ./Dorsfile.toml
 [task.test]
@@ -41,14 +41,32 @@ command = "echo Hello, World! from $PWD"
 run-from = "members"
 ```
 
-Set crate-specific environment variables:
+#### Set crate-specific environment variables:
 ```toml
 # ./member-1/Dorsfile
-[env]
+[[env]]
 CARGO_TARGET_DIR = "../target-member-1"
 ```
+Dors will automatically assign `CARGO_WORKSPACE_ROOT` for you. $PWD, $HOME, and other
+environment variables work as expected.
 
-Pass arguments:
+#### Assign environment variables with bash:
+```toml
+[[env]]
+MY_SPECIAL_ENV_VAR = "$(ls)"
+ANOTHER_ENV_VAR = "$HOME/.cargo/bin"
+```
+
+#### View all available tasks:
+```bash
+$ cargo dors -l
+my-special-task
+load
+deploy
+```
+Also supports tab autocompletion of tasks!
+
+#### Pass arguments:
 ```toml
 [task.say-hi]
 command = 'echo Hello, "$@"!'
@@ -58,17 +76,7 @@ $ cargo dors say-hi -- Fellow Human
 Hello, Fellow Human!
 ```
 
-Reduce duplication by inheriting workspace commands in member crates:
-```toml
-# ./Dorsfile.toml
-[task.check]
-command = "cargo check --all-targets"
-```
-```bash
-$ cd shared_code && cargo dors check
-```
-
-Run multi-line bash scripts:
+#### Run multi-line bash scripts:
 ```toml
 # ./Dorsfile.toml
 [task.play-go]
@@ -78,7 +86,17 @@ telnet $url
 '''
 ```
 
-Invoke commands before or after others:
+#### Reduce duplication by inheriting tasks:
+```toml
+# ./Dorsfile.toml
+[task.check]
+command = "cargo check --all-targets"
+```
+```bash
+$ cd shared_code && cargo dors check
+```
+
+#### Invoke tasks before or after others:
 ```toml
 #./Dorsfile.toml
 [task.play-go]
@@ -92,8 +110,10 @@ command = "sudo apt-get install -y --no-install-recommends telnet"
 [task.congratulate]
 command = "echo 'I hope you played well!'"
 ```
+Befores/afters are ran from left to right. If a task is repeated in a tree of befores,
+it will only be ran once.
 
-Overwrite workspace-wide commands for a single workspace member:
+#### Override workspace tasks for a single workspace member:
 ```toml
 #./Dorsfile.toml
 [task.build]
@@ -103,10 +123,10 @@ run-from = "members"
 ```toml
 #./embedded_device/Dorsfile.toml
 [task.build]
-command = "cargo build --target arm-unknown-linux-gnueabi"
+command = "cargo build --features debug-logs"
 ```
 
-Skip particular members:
+#### Skip particular members:
 ```toml
 #./Dorsfile.toml
 [task.test]
@@ -120,7 +140,7 @@ run-from = "members"
 only-members = ["shared_code"]
 ```
 
-Run commands from member crate on workspace root:
+#### Run commands from member crate on workspace root:
 ```toml
 # ./embedded_device/Dorsfile.toml
 [task.pre-build]
@@ -128,7 +148,7 @@ run-from = "workspace-root"
 command = "echo interestingstuff > target/special-file"
 ```
 
-Run commands from arbitrary paths:
+#### Run commands from arbitrary paths:
 ```toml
 # ./Dorsfile.toml
 [task.run-other-project]

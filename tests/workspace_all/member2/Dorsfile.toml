@@ -1,4 +1,4 @@
-[env]
+[[env]]
 NUMBER = "2"
 
 [task.should-overwrite-members]

@@ -9,6 +9,7 @@ fn main() {
             .version(env!("CARGO_PKG_VERSION"))
             .author("Andrew Klitzke <andrewknpe@gmail.com>")
             .about(about)
+            .max_term_width(100)
             .subcommand(
                 SubCommand::with_name("dors")
                     .version(env!("CARGO_PKG_VERSION"))
@@ -20,10 +21,17 @@ fn main() {
                         Arg::with_name("list")
                             .short("l")
                             .long("list")
-                            .conflicts_with_all(&["TASK", "TASK_ARGS"])
+                            .conflicts_with_all(&["TASK", "TASK_ARGS", "completions"])
                             .display_order(0)
                             .help("list all the available tasks"),
                     )
+                    .arg(Arg::with_name("completions").long("completions").help(
+                        "Generate bash/zsh completions. Install once, and will automatically \
+                        update when Dorsfiles are modified. Usually added to \
+                        .bashrc or similar file to take effect. See `rustup completions`\
+                        for a detailed explanation of how to install the output of this
+                        command",
+                    ))
                     .arg(Arg::with_name("TASK").help("the name of the task to run"))
                     .arg(
                         Arg::with_name("TASK_ARGS")
@@ -58,6 +66,12 @@ fn main() {
             tasks.iter().for_each(|task| println!("{}", task));
             return 0;
         }
+
+        if matches.is_present("completions") {
+            println!(r#"complete -C "cargo dors -l" cargo dors"#);
+            return 0;
+        }
+
         if let Some(task) = matches.value_of("TASK") {
             let args = match matches.values_of("TASK_ARGS") {
                 Some(values) => values.map(|s| s.to_string()).collect(),

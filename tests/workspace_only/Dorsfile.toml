@@ -42,3 +42,11 @@ true
 sh -c 'exit 55'
 true
 '''
+
+[task.fail-if-not-on-root]
+command = '[[ $pwd == $CARGO_WORKSPACE_ROOT ]] || exit 55'
+
+[task.should-not-run-befores-on-members]
+before = ["fail-if-not-on-root"]
+run-from = "members"
+after = ["fail-if-not-on-root"]

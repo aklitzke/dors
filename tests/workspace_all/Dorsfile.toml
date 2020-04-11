@@ -1,4 +1,4 @@
-[env]
+[[env]]
 NUMBER = "1"
 
 [task.check]

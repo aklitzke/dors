@@ -8,6 +8,7 @@ fn test_workspace_only() {
         "should-be-on-member",
         "should-run-before-only-once",
         "should-run-after-only-once",
+        "should-not-run-befores-on-members",
     ]
     .iter()
     .for_each(|task| assert!(run(task, "./tests/workspace_only").unwrap().success()));
@@ -23,6 +24,25 @@ fn test_workspace_failures() {
                 55
             )
         });
+}
+
+#[test]
+fn test_workspace_failures_from_member() {
+    [
+        "should-fail",
+        "should-fail-in-multiline",
+        "fail-if-not-on-root",
+    ]
+    .iter()
+    .for_each(|task| {
+        assert_eq!(
+            run(task, "./tests/workspace_only/member1")
+                .unwrap()
+                .code()
+                .unwrap(),
+            55
+        )
+    });
 }
 
 #[test]
@@ -128,12 +148,29 @@ fn test_list_workspace_all() {
 }
 
 #[test]
+fn test_list_member_only() {
+    let all_tasks = all_tasks("./tests/workspace_member_only/member1").unwrap();
+    assert_eq!(all_tasks.len(), 7);
+}
+
+#[test]
 fn test_no_task() {
     let err = run("fake-task", "tests/workspace_all").unwrap_err();
     assert!(matches!(
         err.kind(),
         DorsError::NoTask(task_name) if task_name == "fake-task"
     ));
+}
+
+#[test]
+fn test_workspace_only_from_member() {
+    ["should-be-on-member", "should-run-before-only-once"]
+        .iter()
+        .for_each(|task| {
+            assert!(run(task, "./tests/workspace_only/member1")
+                .unwrap()
+                .success())
+        });
 }
 
 #[test]

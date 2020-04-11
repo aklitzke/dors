@@ -1,4 +1,4 @@
-[env]
+[[env]]
 IS_ONE = "1"
 
 [task.should-be-here]

@@ -6,6 +6,7 @@ mod take_while_ext;
 pub use crate::error::{DorsError, Error};
 
 use cargo_metadata::MetadataCommand;
+use colored::Colorize;
 use dorsfile::{Dorsfile, MemberModifiers, Run};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -50,26 +51,51 @@ impl DorsfileGetter {
                 let mut env = workspace_dorsfile.env.clone();
                 let mut task = workspace_dorsfile.task.clone();
 
-                // Clear all befores and afters from member task
-                // so that they are not ran on both member and workspace root
                 task.values_mut().for_each(|task| {
+                    // Clear all befores and afters from member task
+                    // so that they are not ran on both member and workspace root
                     task.before = None;
-                    task.after = None
+                    task.after = None;
+
+                    // Clear any 'run-from = "member"' from the workspace, as we ARE running
+                    // from the member
+                    if let Run::Members = task.run_from {
+                        task.run_from = Run::Here;
+                    }
                 });
 
-                env.extend(curr.env.drain());
+                env.extend(curr.env.drain(..));
                 task.extend(curr.task.drain());
                 curr.env = env;
                 curr.task = task;
                 curr
             }
             (true, false) => Dorsfile::load(local)?,
-            (false, true) => self.workspace_dorsfile.as_ref().cloned().unwrap(),
+            (false, true) => {
+                let mut curr = self.workspace_dorsfile.as_ref().cloned().unwrap();
+
+                let mut task = curr.task.clone();
+                task.values_mut().for_each(|task| {
+                    // Clear all befores and afters from member task
+                    // so that they are not ran on both member and workspace root
+                    task.before = None;
+                    task.after = None;
+
+                    // Clear any 'run-from = "member"' from the workspace, as we ARE running
+                    // from the member
+                    if let Run::Members = task.run_from {
+                        task.run_from = Run::Here;
+                    }
+                });
+
+                curr.task = task;
+                curr
+            }
             (false, false) => return Err(DorsError::NoMemberDorsfile.into()),
         };
 
         // extend environment
-        let mut env: HashMap<_, _> = [(
+        let inner_env: HashMap<_, _> = [(
             "CARGO_WORKSPACE_ROOT",
             self.workspace_root.to_str().unwrap(),
         )]
@@ -77,7 +103,8 @@ impl DorsfileGetter {
         .cloned()
         .map(|(key, value)| (key.to_string(), value.to_string()))
         .collect();
-        env.extend(dorsfile.env.drain());
+        let mut env = vec![inner_env];
+        env.extend(dorsfile.env.drain(..));
         dorsfile.env = env;
         Ok(dorsfile)
     }
@@ -116,7 +143,7 @@ impl CargoWorkspaceInfo {
 fn run_command(
     command: &str,
     workdir: &Path,
-    env: &HashMap<String, String>,
+    env: &[HashMap<String, String>],
     args: &[String],
 ) -> ExitStatus {
     use rand::distributions::Alphanumeric;
@@ -131,12 +158,20 @@ fn run_command(
         .canonicalize()
         .unwrap()
         .join(format!("tmp-{}.sh", chars));
-    std::fs::write(&file, command).unwrap();
+    let mut script = env
+        .iter()
+        .flatten()
+        .fold("".to_string(), |mut acc, (k, v)| {
+            acc.push_str(&format!("export {}={}\n", k, v));
+            acc
+        });
+    script.push_str(command);
+    script.push_str("\n");
+    std::fs::write(&file, &script).unwrap();
     let exit_status = Command::new("bash")
         .arg("-e")
         .arg(file.to_str().unwrap())
         .args(args)
-        .envs(env)
         .current_dir(workdir)
         .spawn()
         .unwrap()
@@ -157,8 +192,23 @@ pub fn all_tasks<P: AsRef<Path>>(dir: P) -> Result<Vec<String>, Box<dyn Error>> 
         .collect::<Vec<_>>())
 }
 
+fn print_task(task_name: &str, path: &Path) {
+    // TODO convert absolute path to relative
+    eprintln!(
+        "      {} Running {} from `{}`",
+        "[Dors]".yellow().bold(),
+        task_name.bold(),
+        path.to_str().unwrap().bold()
+    );
+}
+
 pub fn run<P: AsRef<Path>>(task: &str, dir: P) -> Result<ExitStatus, Box<dyn Error>> {
     run_with_args(task, dir, &[])
+}
+
+struct TaskRunner {
+    workspace: CargoWorkspaceInfo,
+    dorsfiles: DorsfileGetter,
 }
 
 pub fn run_with_args<P: AsRef<Path>>(
@@ -171,24 +221,30 @@ pub fn run_with_args<P: AsRef<Path>>(
     let dorsfiles = DorsfileGetter::new(&workspace.root)?;
     let dorsfile = dorsfiles.get(&dir)?;
 
-    struct TaskRunner {
-        workspace: CargoWorkspaceInfo,
-        dorsfiles: DorsfileGetter,
+    TaskRunner {
+        workspace,
+        dorsfiles,
     }
+    // seed recursion
+    .run_task(
+        task,
+        &dorsfile,
+        &dir,
+        args,
+        &mut HashSet::new(),
+        &mut HashSet::new(),
+    )
+}
 
-    // Execute tasks in a big recursive loop
-    // Rust's support for recursion isn't great, so we have to pass
-    // a lot of context into this recursive function, which explains
-    // things like `TaskRunner`
-    // TODO Consider rewriting into an iterator
+impl TaskRunner {
     fn run_task(
+        &self,
         task_name: &str,
         dorsfile: &Dorsfile,
         dir: &Path,
         args: &[String],
         already_ran_befores: &mut HashSet<String>,
         already_ran_afters: &mut HashSet<String>,
-        task_runner: &TaskRunner,
     ) -> Result<ExitStatus, Box<dyn Error>> {
         let task = dorsfile
             .task
@@ -202,14 +258,13 @@ pub fn run_with_args<P: AsRef<Path>>(
                 .filter_map(|before_task_name| {
                     if !already_ran_befores.contains(before_task_name) {
                         already_ran_befores.insert(before_task_name.into());
-                        Some(run_task(
+                        Some(self.run_task(
                             before_task_name,
                             dorsfile,
                             dir,
                             &[],
                             already_ran_befores,
                             &mut HashSet::new(),
-                            task_runner,
                         ))
                     } else {
                         None
@@ -226,58 +281,62 @@ pub fn run_with_args<P: AsRef<Path>>(
 
         // run command
         let result = match task.run_from {
-            Run::Here => run_command(&task.command, dir, &dorsfile.env, args),
+            Run::Here => {
+                print_task(task_name, &dir);
+                run_command(&task.command, dir, &dorsfile.env, args)
+            }
             Run::WorkspaceRoot => {
                 // TODO error gracefully when someone messes this up
-                run_command(
-                    &task.command,
-                    &task_runner.workspace.root,
-                    &dorsfile.env,
-                    args,
-                )
+                let path = &self.workspace.root;
+                print_task(task_name, path);
+                run_command(&task.command, path, &dorsfile.env, args)
             }
             Run::Members => {
-                if dir.canonicalize().unwrap() != task_runner.workspace.root.canonicalize().unwrap()
-                {
+                if dir.canonicalize().unwrap() != self.workspace.root.canonicalize().unwrap() {
                     panic!("cannot run from members from outside workspace root");
                 }
-                task_runner
-                    .workspace
+                self.workspace
                     .members
                     .iter()
-                    .filter_map(|(name, path)| match task.member_modifiers {
-                        Some(ref modifiers) => match modifiers {
-                            MemberModifiers::SkipMembers(skips) => {
-                                if skips.contains(name) {
-                                    None
-                                } else {
-                                    Some(path)
+                    .filter_map(|(name, path)| {
+                        let short_path = if path.is_relative() {
+                            path
+                        } else {
+                            path.strip_prefix(&self.workspace.root).unwrap()
+                        };
+                        match task.member_modifiers {
+                            Some(ref modifiers) => match modifiers {
+                                MemberModifiers::SkipMembers(skips) => {
+                                    if skips.contains(name)
+                                        || skips.contains(&short_path.to_str().unwrap().to_string())
+                                    {
+                                        None
+                                    } else {
+                                        Some(path)
+                                    }
                                 }
-                            }
-                            MemberModifiers::OnlyMembers(onlys) => {
-                                if onlys.contains(name) {
-                                    Some(path)
-                                } else {
-                                    None
+                                MemberModifiers::OnlyMembers(onlys) => {
+                                    if onlys.contains(name)
+                                        || onlys.contains(&short_path.to_str().unwrap().to_string())
+                                    {
+                                        Some(path)
+                                    } else {
+                                        None
+                                    }
                                 }
-                            }
-                        },
-                        None => Some(path),
+                            },
+                            None => Some(path),
+                        }
                     })
                     .map(|path| {
-                        let mut dorsfile = task_runner.dorsfiles.get(&path)?;
-                        // avoid infinite loop
-                        if let Run::Members = &dorsfile.task[task_name].run_from {
-                            dorsfile.task.get_mut(task_name).unwrap().run_from = Run::Here
-                        }
-                        run_task(
+                        let dorsfile = self.dorsfiles.get(&path)?;
+                        self.run_task(
                             task_name,
                             &dorsfile,
                             &path,
                             args,
                             &mut HashSet::new(),
                             &mut HashSet::new(),
-                            task_runner,
                         )
                     })
                     .take_while_last(|result| result.is_ok() && result.as_ref().unwrap().success())
@@ -285,6 +344,7 @@ pub fn run_with_args<P: AsRef<Path>>(
                     .unwrap()?
             }
             Run::Path(ref target_path) => {
+                print_task(task_name, &target_path);
                 run_command(&task.command, &dir.join(target_path), &dorsfile.env, args)
             }
         };
@@ -300,14 +360,13 @@ pub fn run_with_args<P: AsRef<Path>>(
                 .filter_map(|after_task_name| {
                     if !already_ran_afters.contains(after_task_name) {
                         already_ran_afters.insert(after_task_name.into());
-                        Some(run_task(
+                        Some(self.run_task(
                             after_task_name,
                             dorsfile,
                             dir,
                             &[],
                             &mut HashSet::new(),
                             already_ran_afters,
-                            task_runner,
                         ))
                     } else {
                         None
@@ -324,18 +383,4 @@ pub fn run_with_args<P: AsRef<Path>>(
 
         Ok(result)
     }
-
-    // seed recursion
-    run_task(
-        task,
-        &dorsfile,
-        &dir,
-        args,
-        &mut HashSet::new(),
-        &mut HashSet::new(),
-        &TaskRunner {
-            workspace,
-            dorsfiles,
-        },
-    )
 }
