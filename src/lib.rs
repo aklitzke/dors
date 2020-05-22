@@ -384,3 +384,95 @@ impl TaskRunner {
         Ok(result)
     }
 }
+
+#[allow(clippy::print_stdout)]
+pub fn process_cmd<'a>(matches: &clap::ArgMatches<'a>) -> i32 {
+    if matches.is_present("list") {
+        let mut tasks = match all_tasks(std::env::current_dir().unwrap()) {
+            Ok(tasks) => tasks,
+            Err(e) => {
+                println!("{}", e);
+                return 1;
+            }
+        };
+        tasks.sort();
+        tasks.iter().for_each(|task| println!("{}", task));
+        return 0;
+    }
+
+    if matches.is_present("completions") {
+        println!(r#"complete -C "cargo dors -l" cargo dors"#);
+        return 0;
+    }
+
+    if let Some(task) = matches.value_of("TASK") {
+        let args = match matches.values_of("TASK_ARGS") {
+            Some(values) => values.map(|s| s.to_string()).collect(),
+            None => vec![],
+        };
+        match run_with_args(&task, std::env::current_dir().unwrap(), &args) {
+            Ok(resp) => return resp.code().unwrap(),
+            Err(e) => {
+                println!("{}", e);
+                return 1;
+            }
+        }
+    }
+
+    let mut tasks = match all_tasks(std::env::current_dir().unwrap()) {
+        Ok(tasks) => tasks,
+        Err(e) => {
+            println!("{}", e);
+            return 1;
+        }
+    };
+    tasks.sort();
+
+    if matches.is_present("list") {
+        tasks.iter().for_each(|task| println!("{}", task));
+        return 0;
+    }
+
+    println!("{}: Please select a task to run:", "Error".red());
+    tasks.iter().for_each(|task| println!("{}", task.bold()));
+    1
+}
+
+pub fn get_about() -> &'static str {
+    "No-fuss workspace-aware task runner for rust"
+}
+
+pub fn set_app_options<'a, 'b>(app: clap::App<'a, 'b>) -> clap::App<'a, 'b> {
+    app.version(env!("CARGO_PKG_VERSION"))
+        .author("Andrew Klitzke <andrewknpe@gmail.com>")
+        .setting(clap::AppSettings::TrailingVarArg)
+        .setting(clap::AppSettings::ColoredHelp)
+        .setting(clap::AppSettings::DontCollapseArgsInUsage)
+        .about(get_about())
+        .arg(
+            clap::Arg::with_name("list")
+                .short("l")
+                .long("list")
+                .conflicts_with_all(&["TASK", "TASK_ARGS", "completions"])
+                .display_order(0)
+                .help("list all the available tasks"),
+        )
+        .arg(
+            clap::Arg::with_name("completions")
+                .long("completions")
+                .help(
+                    "Generate bash/zsh completions. Install once, and will automatically \
+                        update when Dorsfiles are modified. Usually added to \
+                        .bashrc or similar file to take effect. See `rustup completions`\
+                        for a detailed explanation of how to install the output of this
+                        command",
+                ),
+        )
+        .arg(clap::Arg::with_name("TASK").help("the name of the task to run"))
+        .arg(
+            clap::Arg::with_name("TASK_ARGS")
+                .help("arguments to pass to the task")
+                .requires("TASK")
+                .multiple(true),
+        )
+}
