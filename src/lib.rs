@@ -387,8 +387,12 @@ impl TaskRunner {
 
 #[allow(clippy::print_stdout)]
 pub fn process_cmd<'a>(matches: &clap::ArgMatches<'a>) -> i32 {
+    let directory = match matches.value_of("subdirectory") {
+        Some(directory) => directory.into(),
+        None => std::env::current_dir().unwrap(),
+    };
     if matches.is_present("list") {
-        let mut tasks = match all_tasks(std::env::current_dir().unwrap()) {
+        let mut tasks = match all_tasks(directory) {
             Ok(tasks) => tasks,
             Err(e) => {
                 println!("{}", e);
@@ -410,7 +414,7 @@ pub fn process_cmd<'a>(matches: &clap::ArgMatches<'a>) -> i32 {
             Some(values) => values.map(|s| s.to_string()).collect(),
             None => vec![],
         };
-        match run_with_args(&task, std::env::current_dir().unwrap(), &args) {
+        match run_with_args(&task, directory, &args) {
             Ok(resp) => return resp.code().unwrap(),
             Err(e) => {
                 println!("{}", e);
@@ -419,7 +423,7 @@ pub fn process_cmd<'a>(matches: &clap::ArgMatches<'a>) -> i32 {
         }
     }
 
-    let mut tasks = match all_tasks(std::env::current_dir().unwrap()) {
+    let mut tasks = match all_tasks(directory) {
         Ok(tasks) => tasks,
         Err(e) => {
             println!("{}", e);
@@ -450,11 +454,20 @@ pub fn set_app_options<'a, 'b>(app: clap::App<'a, 'b>) -> clap::App<'a, 'b> {
         .setting(clap::AppSettings::DontCollapseArgsInUsage)
         .about(get_about())
         .arg(
+            clap::Arg::with_name("subdirectory")
+                .short("d")
+                .long("subdirectory")
+                .conflicts_with_all(&["completions"])
+                .display_order(0)
+                .takes_value(true)
+                .help("only run task on a specified subdirectory"),
+        )
+        .arg(
             clap::Arg::with_name("list")
                 .short("l")
                 .long("list")
                 .conflicts_with_all(&["TASK", "TASK_ARGS", "completions"])
-                .display_order(0)
+                .display_order(1)
                 .help("list all the available tasks"),
         )
         .arg(
