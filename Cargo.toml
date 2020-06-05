@@ -1,6 +1,6 @@
 [package]
 name = "dors"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Andrew Klitzke <andrewknpe@gmail.com>"]
 edition = "2018"
 description = "No-fuss workspace-friendly task runner for cargo"
