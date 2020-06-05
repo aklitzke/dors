@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "dors"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "cargo_metadata",
  "clap",
