@@ -22,7 +22,7 @@ Designed with the hope that easy things will be easy, and hard things will be po
 command = "cargo test --target x86_86-unknown-linux-gnu -- --nocapture"
 ```
 ```bash
-$ cargo dors do-tests
+$ dors do-tests
 ```
 
 ## Installation

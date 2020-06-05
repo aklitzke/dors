@@ -406,6 +406,7 @@ pub fn process_cmd<'a>(matches: &clap::ArgMatches<'a>) -> i32 {
 
     if matches.is_present("completions") {
         println!(r#"complete -C "cargo dors -l" cargo dors"#);
+        println!(r#"complete -C "cargo dors -l" dors"#);
         return 0;
     }
 
